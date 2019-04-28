@@ -10,33 +10,34 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var homeTemplate *template.Template
+var err error
+var homeTemplate, contactTemplate *template.Template
 
-func handlerFunc(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "<h1>Welcome to my awesome site!</h1>")
-}
-
-func Home(w http.ResponseWriter, r *http.Request) {
-	var err error
-
+func home(w http.ResponseWriter, r *http.Request) {
 	homeTemplate, err = template.ParseFiles("views/home.gohtml")
 	if err != nil {
 		panic(err)
 	}
 
 	w.Header().Set("Content-Type", "text/html")
+	// log.Printf("http.ResponseWriter w: %T, %+v", w, w)
 	if err := homeTemplate.Execute(w, nil); err != nil {
 		log.Printf("homeTemplate.Execute() returned error: %v", err)
 		os.Exit(1)
 	}
 }
 
-func Contact(w http.ResponseWriter, r *http.Request) {
-	log.Printf("entered Contact")
+func contact(w http.ResponseWriter, r *http.Request) {
+	contactTemplate, err = template.ParseFiles("views/contact.gohtml")
+	if err != nil {
+		panic(err)
+	}
+
 	w.Header().Set("Content-Type", "text/html")
-	fmt.Fprintf(w, "To get in touch, please send an email "+
-		"to <a href=\"mailto:support@lenslocked.com\">"+
-		"support@lenslocked.com</a>.")
+	if err := contactTemplate.Execute(w, nil); err != nil {
+		log.Printf("contactTemplate.Execute() returned error: %v", err)
+		os.Exit(1)
+	}
 }
 
 func Faq(w http.ResponseWriter, r *http.Request) {
@@ -55,10 +56,14 @@ func main() {
 	// if err != nil {
 	// 	panic(err)
 	// }
+	// contactTemplate, err = template.ParseFiles("views/contact.gohtml")
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 	r := mux.NewRouter()
-	r.HandleFunc("/", Home)
-	r.HandleFunc("/contact", Contact)
+	r.HandleFunc("/", home)
+	r.HandleFunc("/contact", contact)
 	r.HandleFunc("/faq", Faq)
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 
