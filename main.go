@@ -14,7 +14,7 @@ var err error
 var homeTemplate, contactTemplate *template.Template
 
 func home(w http.ResponseWriter, r *http.Request) {
-	homeTemplate, err = template.ParseFiles("views/home.gohtml")
+	homeTemplate, err = template.ParseFiles("views/home.gohtml", "views/layouts/footer.gohtml")
 	if err != nil {
 		panic(err)
 	}
@@ -28,7 +28,7 @@ func home(w http.ResponseWriter, r *http.Request) {
 }
 
 func contact(w http.ResponseWriter, r *http.Request) {
-	contactTemplate, err = template.ParseFiles("views/contact.gohtml")
+	contactTemplate, err = template.ParseFiles("views/contact.gohtml", "views/layouts/footer.gohtml")
 	if err != nil {
 		panic(err)
 	}
