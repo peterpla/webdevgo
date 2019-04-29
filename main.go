@@ -2,42 +2,44 @@ package main
 
 import (
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"os"
 
+	"./views"
+
 	"github.com/gorilla/mux"
 )
 
-var err error
-var homeTemplate, contactTemplate *template.Template
+var homeView *views.View
+var contactView *views.View
 
 func home(w http.ResponseWriter, r *http.Request) {
-	homeTemplate, err = template.ParseFiles("views/home.gohtml", "views/layouts/footer.gohtml")
-	if err != nil {
-		panic(err)
-	}
+	log.Println("entered home()")
+	log.Printf("homeView: %T, %+v", homeView, *homeView)
+	log.Printf("homeView.Template: %T, %+v", homeView.Template, *homeView.Template)
 
 	w.Header().Set("Content-Type", "text/html")
-	// log.Printf("http.ResponseWriter w: %T, %+v", w, w)
-	if err := homeTemplate.Execute(w, nil); err != nil {
-		log.Printf("homeTemplate.Execute() returned error: %v", err)
+
+	if err := homeView.Template.Execute(w, nil); err != nil {
+		log.Printf("homeView.Execute() returned error: %v", err)
 		os.Exit(1)
 	}
+	log.Println("exiting home()")
 }
 
 func contact(w http.ResponseWriter, r *http.Request) {
-	contactTemplate, err = template.ParseFiles("views/contact.gohtml", "views/layouts/footer.gohtml")
-	if err != nil {
-		panic(err)
-	}
+	log.Println("entered contact()")
+	log.Printf("contactView: %T, %+v", contactView, *contactView)
+	log.Printf("contactView.Template: %T, %+v", contactView.Template, *contactView.Template)
 
 	w.Header().Set("Content-Type", "text/html")
-	if err := contactTemplate.Execute(w, nil); err != nil {
-		log.Printf("contactTemplate.Execute() returned error: %v", err)
+
+	if err := contactView.Template.Execute(w, nil); err != nil {
+		log.Printf("contactView.Execute() returned error: %v", err)
 		os.Exit(1)
 	}
+	log.Println("exiting contact()")
 }
 
 func Faq(w http.ResponseWriter, r *http.Request) {
@@ -52,14 +54,12 @@ func NotFound(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	// homeTemplate, err = template.ParseFiles("views/home.gohtml")
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// contactTemplate, err = template.ParseFiles("views/contact.gohtml")
-	// if err != nil {
-	// 	panic(err)
-	// }
+	homeView = views.NewView("views/home.gohtml")
+	log.Printf("homeView: %T, %+v", homeView, *homeView)
+	log.Printf("homeView.Template: %T, %+v", homeView.Template, *homeView.Template)
+
+	contactView = views.NewView("views/contact.gohtml")
+	log.Printf("contactView: %T, %+v", contactView, *contactView)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", home)
