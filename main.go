@@ -16,12 +16,12 @@ var contactView *views.View
 
 func home(w http.ResponseWriter, r *http.Request) {
 	log.Println("entered home()")
-	log.Printf("homeView: %T, %+v", homeView, *homeView)
-	log.Printf("homeView.Template: %T, %+v", homeView.Template, *homeView.Template)
+	// log.Printf("homeView: %T, %+v", homeView, *homeView)
+	// log.Printf("homeView.Template: %T, %+v", homeView.Template, *homeView.Template)
 
 	w.Header().Set("Content-Type", "text/html")
 
-	if err := homeView.Template.Execute(w, nil); err != nil {
+	if err := homeView.Template.ExecuteTemplate(w, homeView.Layout, nil); err != nil {
 		log.Printf("homeView.Execute() returned error: %v", err)
 		os.Exit(1)
 	}
@@ -30,12 +30,12 @@ func home(w http.ResponseWriter, r *http.Request) {
 
 func contact(w http.ResponseWriter, r *http.Request) {
 	log.Println("entered contact()")
-	log.Printf("contactView: %T, %+v", contactView, *contactView)
-	log.Printf("contactView.Template: %T, %+v", contactView.Template, *contactView.Template)
+	// log.Printf("contactView: %T, %+v", contactView, *contactView)
+	// log.Printf("contactView.Template: %T, %+v", contactView.Template, *contactView.Template)
 
 	w.Header().Set("Content-Type", "text/html")
 
-	if err := contactView.Template.Execute(w, nil); err != nil {
+	if err := contactView.Template.ExecuteTemplate(w, contactView.Layout, nil); err != nil {
 		log.Printf("contactView.Execute() returned error: %v", err)
 		os.Exit(1)
 	}
@@ -54,12 +54,13 @@ func NotFound(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	homeView = views.NewView("views/home.gohtml")
+	homeView = views.NewView("bootstrap", "views/home.gohtml")
 	log.Printf("homeView: %T, %+v", homeView, *homeView)
 	log.Printf("homeView.Template: %T, %+v", homeView.Template, *homeView.Template)
 
-	contactView = views.NewView("views/contact.gohtml")
+	contactView = views.NewView("bootstrap", "views/contact.gohtml")
 	log.Printf("contactView: %T, %+v", contactView, *contactView)
+	log.Printf("contactView.Template: %T, %+v", contactView.Template, *contactView.Template)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", home)
