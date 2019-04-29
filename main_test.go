@@ -17,14 +17,13 @@ func TestViewHandlers(t *testing.T) {
 	}
 
 	var tests = []testset{
-		{"GET", "/faq", Faq, http.StatusOK},
 		{"GET", "/blah", NotFound, http.StatusNotFound},
-		{"GET", "/", home, http.StatusOK},
 		{"GET", "/contact", http.HandlerFunc(contact), http.StatusOK},
+		{"GET", "/", home, http.StatusOK},
 	}
 
 	for _, r := range tests {
-		log.Printf("*** current test: method: %s, url: %s, handler: %T / %p, expected: %d", r.method, r.url, r.handler, r.handler, r.expected)
+		log.Printf("*** current test: method: %s, url: %s, handler: %T, expected: %d", r.method, r.url, r.handler, r.expected)
 
 		// create a request to pass to our handler
 		// we don't have any query parameters for now, so we'll pass
