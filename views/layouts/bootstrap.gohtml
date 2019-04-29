@@ -10,6 +10,8 @@
 
     <div class="container-fluid">
       {{ template "yield" .}}
+      <!-- footer -->
+      {{template "footer"}}
     </div>
 
     <!-- jquery & Bootstrap JS -->
@@ -17,8 +19,6 @@
     </script>
     <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js">
     </script>
-    <!-- footer -->
-    {{template "footer"}}
   </body>
 </html>
 {{end}}
