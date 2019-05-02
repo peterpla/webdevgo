@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"./controllers"
 	"./views"
 
 	"github.com/gorilla/mux"
@@ -11,7 +12,8 @@ import (
 
 var homeView *views.View
 var contactView *views.View
-var signupView *views.View
+
+// var signupView *views.View
 var faqView *views.View
 
 func home(w http.ResponseWriter, r *http.Request) {
@@ -28,12 +30,12 @@ func contact(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func signup(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html")
-	if err := signupView.Render(w, nil); err != nil {
-		panic(err)
-	}
-}
+// func signup(w http.ResponseWriter, r *http.Request) {
+// 	w.Header().Set("Content-Type", "text/html")
+// 	if err := signupView.Render(w, nil); err != nil {
+// 		panic(err)
+// 	}
+// }
 
 func faq(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
@@ -51,13 +53,15 @@ func NotFound(w http.ResponseWriter, r *http.Request) {
 func main() {
 	homeView = views.NewView("bootstrap", "views/home.gohtml")
 	contactView = views.NewView("bootstrap", "views/contact.gohtml")
-	signupView = views.NewView("bootstrap", "views/signup.gohtml")
+	// signupView = views.NewView("bootstrap", "views/signup.gohtml")
 	faqView = views.NewView("bootstrap", "views/faq.gohtml")
+
+	usersC := controllers.NewUsers()
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", home)
 	r.HandleFunc("/contact", contact)
-	r.HandleFunc("/signup", signup)
+	r.HandleFunc("/signup", usersC.New)
 	r.HandleFunc("/faq", faq)
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 
