@@ -42,9 +42,9 @@ func NotFound(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	homeView = views.NewView("bootstrap", "views/static/home.gohtml")
-	contactView = views.NewView("bootstrap", "views/static/contact.gohtml")
-	faqView = views.NewView("bootstrap", "views/static/faq.gohtml")
+	homeView = views.NewView("bootstrap", "static/home")
+	contactView = views.NewView("bootstrap", "static/contact")
+	faqView = views.NewView("bootstrap", "static/faq")
 
 	staticC := controllers.NewStatic()
 	usersC := controllers.NewUsers()
