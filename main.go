@@ -33,7 +33,7 @@ func main() {
 	r.Handle("/", staticC.Home).Methods("GET")
 	r.Handle("/contact", staticC.Contact).Methods("GET")
 	r.Handle("/faq", staticC.Faq).Methods("GET")
-	r.Handle("/gallery", galleriesC.Gallery).Methods("GET")
+	r.Handle("/galleries/new", galleriesC.Gallery).Methods("GET")
 
 	r.HandleFunc("/signup", usersC.New).Methods("GET")
 	r.HandleFunc("/signup", usersC.Create).Methods("POST")
