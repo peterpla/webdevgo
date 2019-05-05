@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"./controllers"
 )
 
 func TestViewHandlers(t *testing.T) {
@@ -16,10 +18,18 @@ func TestViewHandlers(t *testing.T) {
 		expected int
 	}
 
+	staticC := controllers.NewStatic()
+	usersC := controllers.NewUsers()
+	galleriesC := controllers.NewGalleries()
+
 	var tests = []testset{
 		{"GET", "/blah", NotFound, http.StatusNotFound},
-		{"GET", "/contact", http.HandlerFunc(contact), http.StatusOK},
-		{"GET", "/", home, http.StatusOK},
+		{"GET", "/contact", staticC.Contact.ServeHTTP, http.StatusOK},
+		{"GET", "/faq", staticC.Faq.ServeHTTP, http.StatusOK},
+		{"GET", "/", staticC.Home.ServeHTTP, http.StatusOK},
+		{"GET", "/galleries/new", galleriesC.Gallery.ServeHTTP, http.StatusOK},
+		{"GET", "/signup", usersC.New, http.StatusOK},
+		// {"POST", "/signup", usersC.Create, http.StatusOK}, // need to populate form body
 	}
 
 	for _, r := range tests {
