@@ -17,8 +17,9 @@ const (
 
 type User struct { // database table "users"
 	gorm.Model
-	Name  string
-	Email string `gorm:"not null;unique_index"`
+	Name   string
+	Email  string `gorm:"not null;unique_index"`
+	Orders []Order
 }
 
 type Order struct {
@@ -47,31 +48,13 @@ func main() {
 	fmt.Printf("Successfully connected! postgresql://%s:\"%s\"@%s:%d/%s\n", user, "", host, port, dbname)
 
 	var user User
-	db.First(&user)
+
+	db.Preload("Orders").First(&user)
 	if db.Error != nil {
 		panic(db.Error)
 	}
 
-	createOrder(db, user, 1001, "Fake Description #1")
-	createOrder(db, user, 9999, "Fake Description #2")
-	createOrder(db, user, 8800, "Fake Description #3")
-
-	// var users []User
-	// db.Find(&users)
-	// if db.Error != nil {
-	// 	panic(db.Error)
-	// }
-	// fmt.Println("Retrieved", len(users), "users.")
-	// fmt.Println(users)
-}
-
-func createOrder(db *gorm.DB, user User, amount int, desc string) {
-	db.Create(&Order{
-		UserID:      user.ID,
-		Amount:      amount,
-		Description: desc,
-	})
-	if db.Error != nil {
-		panic(db.Error)
-	}
+	fmt.Println("Email:", user.Email)
+	fmt.Println("Number of orders:", len(user.Orders))
+	fmt.Println("Orders:", user.Orders)
 }
