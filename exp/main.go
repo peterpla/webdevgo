@@ -1,10 +1,7 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"os"
-	"strings"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/lib/pq"
@@ -40,30 +37,11 @@ func main() {
 	// postgresql://[user[:password]@][netloc][:port][/dbname]
 	fmt.Printf("Successfully connected! postgresql://%s:\"%s\"@%s:%d/%s\n", user, "", host, port, dbname)
 
-	db.AutoMigrate(&User{})
-
-	name, email := getInfo()
-
-	u := &User{
-		Name:  name,
-		Email: email,
+	var users []User
+	db.Find(&users)
+	if db.Error != nil {
+		panic(db.Error)
 	}
-	if err = db.Create(u).Error; err != nil {
-		panic(err)
-	}
-	fmt.Printf("Created record: %+v\n", u)
-}
-
-func getInfo() (name, email string) {
-	reader := bufio.NewReader(os.Stdin)
-
-	fmt.Println("What is your name?")
-	name, _ = reader.ReadString('\n')
-	name = strings.TrimSpace(name)
-
-	fmt.Println("What is your email?")
-	email, _ = reader.ReadString('\n')
-	email = strings.TrimSpace(email)
-
-	return name, email
+	fmt.Println("Retrieved", len(users), "users.")
+	fmt.Println(users)
 }
