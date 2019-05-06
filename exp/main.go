@@ -1,18 +1,28 @@
 package main
 
 import (
-	"database/sql"
+	"bufio"
 	"fmt"
+	"os"
+	"strings"
 
+	"github.com/jinzhu/gorm"
 	_ "github.com/lib/pq"
 )
 
 const (
-	host   = "localhost"
-	port   = 5432
-	user   = "postgres"
+	host = "localhost"
+	port = 5432
+	user = "postgres"
+	// password = "" // DO NOT use empty-string password when NO password is set!
 	dbname = "whatever_dev"
 )
+
+type User struct { // database table "users"
+	gorm.Model
+	Name  string
+	Email string `gorm:"not null;unique_index"`
+}
 
 func main() {
 
@@ -20,38 +30,40 @@ func main() {
 		"dbname=%s sslmode=disable",
 		host, port, user, dbname)
 
-	db, err := sql.Open("postgres", psqlInfo)
+	db, err := gorm.Open("postgres", psqlInfo)
 	if err != nil {
 		panic(err)
 	}
 	defer db.Close()
+	db.LogMode(true)
 
-	err = db.Ping()
-	if err != nil {
+	// postgresql://[user[:password]@][netloc][:port][/dbname]
+	fmt.Printf("Successfully connected! postgresql://%s:\"%s\"@%s:%d/%s\n", user, "", host, port, dbname)
+
+	db.AutoMigrate(&User{})
+
+	name, email := getInfo()
+
+	u := &User{
+		Name:  name,
+		Email: email,
+	}
+	if err = db.Create(u).Error; err != nil {
 		panic(err)
 	}
+	fmt.Printf("Created record: %+v\n", u)
+}
 
-	fmt.Println("Successfully connected!")
+func getInfo() (name, email string) {
+	reader := bufio.NewReader(os.Stdin)
 
-	var id int
-	for i := 1; i < 6; i++ {
-		// Create some fake data
-		userId := 1
-		if i > 3 {
-			userId = 2
-		}
-		amount := 1000 * i
-		description := fmt.Sprintf("USB-C Adapter x%d", i)
+	fmt.Println("What is your name?")
+	name, _ = reader.ReadString('\n')
+	name = strings.TrimSpace(name)
 
-		err = db.QueryRow(`
-		  INSERT INTO orders (user_id, amount, description)
-		  VALUES ($1, $2, $3)
-		  RETURNING id`,
-			userId, amount, description).Scan(&id)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println("Created an order with the ID:", id)
-	}
+	fmt.Println("What is your email?")
+	email, _ = reader.ReadString('\n')
+	email = strings.TrimSpace(email)
 
+	return name, email
 }
