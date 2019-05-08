@@ -5,9 +5,18 @@ import (
 	"net/http"
 
 	"./controllers"
+	"./models"
 	"./views"
 
 	"github.com/gorilla/mux"
+)
+
+const (
+	dbHost = "localhost"
+	dbPort = 5432
+	dbUser = "postgres"
+	// password = "" // DO NOT use empty-string password when NO password is set!
+	dbName = "whatever_dev"
 )
 
 var homeView *views.View
@@ -21,6 +30,17 @@ func NotFound(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
+		"dbname=%s sslmode=disable",
+		dbHost, dbPort, dbUser, dbName)
+	us, err := models.NewUserService(psqlInfo)
+	if err != nil {
+		panic(err)
+	}
+	defer us.Close()
+
+	us.DestructiveReset()
+
 	homeView = views.NewView("bootstrap", "static/home")
 	contactView = views.NewView("bootstrap", "static/contact")
 	faqView = views.NewView("bootstrap", "static/faq")
