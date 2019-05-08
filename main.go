@@ -41,6 +41,22 @@ func main() {
 
 	us.DestructiveReset()
 
+	// Create a user
+	user := models.User{
+		Name:  "Michael Scott",
+		Email: "michael@dundermifflin.com",
+	}
+	if err = us.Create(&user); err != nil {
+		panic(err)
+	}
+
+	// Query for that user
+	foundUser, err := us.ByID(1)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(foundUser)
+
 	homeView = views.NewView("bootstrap", "static/home")
 	contactView = views.NewView("bootstrap", "static/contact")
 	faqView = views.NewView("bootstrap", "static/faq")

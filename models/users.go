@@ -42,6 +42,13 @@ var (
 	ErrNotFound = errors.New("models: resource not found")
 )
 
+// Create will create the provided User record in the database,
+// and backfill gorm.Model data including the ID, CreatedAt, and
+// UpdatedAt fields.
+func (us *UserService) Create(user *User) error {
+	return us.db.Create(user).Error
+}
+
 // ByID will look up a user with the provided ID.
 // If the user is found, return a nil error
 // If the user is not found, return ErrNotFound
