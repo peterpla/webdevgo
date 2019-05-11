@@ -2,12 +2,14 @@ package models
 
 import (
 	"fmt"
+	"log"
 	"testing"
 )
 
 func TestUsers(t *testing.T) {
+	log.Printf("entered TestUsers")
 
-	tests := []struct {
+	testCases := []struct {
 		name           string
 		dbHost         string // "localhost"
 		dbPort         uint   // 5432
@@ -17,11 +19,11 @@ func TestUsers(t *testing.T) {
 		dbName         string // "whatever_dev"
 	}{
 		{"Basic pass", "localhost", 5432, "postgres", true, "", "ignore_test"},
-		{"Bad password", "localhost", 5432, "postgres", false, "badPassword", "ignore_test"},
+		{"Fail with bad password", "localhost", 5432, "postgres", false, "badPassword", "ignore_test"},
 	}
 
 	var psqlInfo string
-	for _, r := range tests {
+	for _, r := range testCases {
 		t.Run(r.name, func(t *testing.T) {
 			if r.dbSkipPassword {
 				// nil password, skip password portion of connection string
@@ -41,6 +43,8 @@ func TestUsers(t *testing.T) {
 				t.Log(err)
 				t.Fail()
 			}
+
+			// close the User Service connection created by NewUserService
 			us.Close()
 		})
 	}

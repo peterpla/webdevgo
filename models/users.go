@@ -2,6 +2,8 @@ package models
 
 import (
 	"errors"
+	"fmt"
+	"log"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -19,11 +21,14 @@ type UserService struct {
 
 // NewUserService returns a connection to the database holding User objects
 func NewUserService(connectionInfo string) (*UserService, error) {
+	log.Printf("enter NewUserService, connectionInfo: %s", connectionInfo)
 	db, err := gorm.Open("postgres", connectionInfo)
 	if err != nil {
 		return nil, err
 	}
 	db.LogMode(true)
+	// postgresql://[user[:password]@][netloc][:port][/dbname]
+	fmt.Println("Successfully connected to database!")
 
 	return &UserService{
 		db: db,
@@ -32,6 +37,7 @@ func NewUserService(connectionInfo string) (*UserService, error) {
 
 // Close the UserService database connection
 func (us *UserService) Close() error {
+	log.Printf("enter UserService.Close")
 	return us.db.Close()
 }
 
@@ -66,6 +72,20 @@ func (us *UserService) ByID(id uint) (*User, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+// ByEmail looks up a user with the given email address and
+// returns that user.
+// If the user is found, we will return a nil error.
+// If the user is not found, we will return ErrNotFound
+// If there is another error, we will return an error with
+// more information about what went wrong. This may not be
+// an error genereated by the models package.
+func (us *UserService) ByEmail(email string) (*User, error) {
+	var user User
+	db := us.db.Where("email = ?", email)
+	err := first(db, &user)
+	return &user, err
 }
 
 // DestructiveReset drops the user table and rebuilds it

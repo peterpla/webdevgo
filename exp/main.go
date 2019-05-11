@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 
+	"../models"
+
 	"github.com/jinzhu/gorm"
 	_ "github.com/lib/pq"
 )
@@ -35,42 +37,39 @@ func main() {
 		"dbname=%s sslmode=disable",
 		dbHost, dbPort, dbUser, dbName)
 
-	db, err := gorm.Open("postgres", psqlInfo)
+	us, err := models.NewUserService(psqlInfo)
 	if err != nil {
 		panic(err)
 	}
-	defer db.Close()
+	defer us.Close()
 
-	db.LogMode(true)
-	db.AutoMigrate(&User{}, &Order{})
+	// This will reset the database on every run, but is fine
+	// for testing things out.
+	us.DestructiveReset()
 
-	// postgresql://[user[:password]@][netloc][:port][/dbname]
-	fmt.Printf("Successfully connected! postgresql://%s:\"%s\"@%s:%d/%s\n", dbUser, "", dbHost, dbPort, dbName)
-
-	// retrieve orders by user
-	var newU User
-	newU.Name = "Peter Plamondon"
-	fmt.Printf("Before: newU: %+v", newU)
-
-	// db.Preload("Orders").Find(&newU)
-	db.Preload("Orders").First(&newU)
-	if db.Error != nil {
-		panic(db.Error)
+	// Create a user
+	user := models.User{
+		Name:  "Michael Scott",
+		Email: "michael@dundermifflin.com",
 	}
-	fmt.Printf("After: newU: %+v", newU)
+	if err := us.Create(&user); err != nil {
+		panic(err)
+	}
 
-	fmt.Printf("Email: %s\n", newU.Email)
-	fmt.Printf("Number of orders: %d\n", len(newU.Orders))
-	fmt.Printf("Orders: %+v\n", newU.Orders)
+	foundUser, err := us.ByEmail("michael@dundermifflin.com")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(foundUser)
 }
 
-func createOrder(db *gorm.DB, user User, amount int, desc string) {
-	db.Create(&Order{
-		UserID:      user.ID,
-		Amount:      amount,
-		Description: desc,
-	})
-	if db.Error != nil {
-		panic(db.Error)
-	}
-}
+// func createOrder(db *gorm.DB, user User, amount int, desc string) {
+// 	db.Create(&Order{
+// 		UserID:      user.ID,
+// 		Amount:      amount,
+// 		Description: desc,
+// 	})
+// 	if db.Error != nil {
+// 		panic(db.Error)
+// 	}
+// }
