@@ -61,6 +61,28 @@ func main() {
 		panic(err)
 	}
 	fmt.Println(foundUser)
+
+	// Update a user
+	user.Name = "Updated Name"
+	if err = us.Update(&user); err != nil {
+		panic(err)
+	}
+
+	// Find using ByEmail again, observe the updated name
+	foundUser, err = us.ByEmail("michael@dundermifflin.com")
+	fmt.Println(foundUser)
+
+	// Delete a user
+	if err = us.Delete(foundUser.ID); err != nil {
+		panic(err)
+	}
+
+	// Find using ByID, verify not found
+	_, err = us.ByID(foundUser.ID)
+	if err != models.ErrNotFound {
+		panic("user was not deleted!")
+	}
+
 }
 
 // func createOrder(db *gorm.DB, user User, amount int, desc string) {

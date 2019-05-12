@@ -46,6 +46,10 @@ var (
 	// but returned zero rows. I.e., the resource cannot be found
 	// in the database.
 	ErrNotFound = errors.New("models: resource not found")
+
+	// ErrInvalidID is returned when an invalid ID is provided
+	// to a method like Delete.
+	ErrInvalidID = errors.New("models: ID provided was invalid")
 )
 
 // Create will create the provided User record in the database,
@@ -92,6 +96,21 @@ func (us *UserService) ByEmail(email string) (*User, error) {
 func (us *UserService) DestructiveReset() {
 	us.db.DropTableIfExists(&User{})
 	us.db.AutoMigrate(&User{})
+}
+
+// Update will update the provided user with all of the data
+// in the provided User object
+func (us *UserService) Update(user *User) error {
+	return us.db.Save(user).Error
+}
+
+// Delete will delete the user with the provided ID
+func (us *UserService) Delete(id uint) error {
+	if id == 0 {
+		return ErrInvalidID
+	}
+	user := User{Model: gorm.Model{ID: id}}
+	return us.db.Delete(&user).Error
 }
 
 // first will query using the provided gorm.DB pointer,
