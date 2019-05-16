@@ -4,16 +4,19 @@ import (
 	"fmt"
 	"net/http"
 
+	"../models"
 	"../views"
 )
 
 type Users struct {
 	NewView *views.View
+	us      *models.UserService
 }
 
-func NewUsers() *Users {
+func NewUsers(us *models.UserService) *Users {
 	return &Users{
 		NewView: views.NewView("bootstrap", "users/new"),
+		us:      us,
 	}
 }
 
@@ -42,6 +45,16 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	if err := parseForm(r, &form); err != nil {
 		panic(err)
 	}
-	fmt.Fprintf(w, "Form: %+v", form) // echo to web page
-	fmt.Printf("Form: %+v", form)     // echo to stdout
+	user := models.User{
+		Name:  form.Name,
+		Email: form.Email,
+	}
+
+	if err := u.us.Create(&user); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprintf(w, "User is: %+v", user) // echo to web page
+	fmt.Printf("User is: %+v", user)     // echo to stdout
 }
