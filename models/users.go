@@ -92,12 +92,6 @@ func (us *UserService) ByEmail(email string) (*User, error) {
 	return &user, err
 }
 
-// DestructiveReset drops the user table and rebuilds it
-func (us *UserService) DestructiveReset() {
-	us.db.DropTableIfExists(&User{})
-	us.db.AutoMigrate(&User{})
-}
-
 // Update will update the provided user with all of the data
 // in the provided User object
 func (us *UserService) Update(user *User) error {
@@ -111,6 +105,24 @@ func (us *UserService) Delete(id uint) error {
 	}
 	user := User{Model: gorm.Model{ID: id}}
 	return us.db.Delete(&user).Error
+}
+
+// DestructiveReset drops the user table and rebuilds it
+func (us *UserService) DestructiveReset() error {
+	err := us.db.DropTableIfExists(&User{}).Error
+	if err != nil {
+		return err
+	}
+	return us.AutoMigrate()
+}
+
+// AutoMigrate will attempt to automaticaly migrate
+// the Users table
+func (us *UserService) AutoMigrate() error {
+	if err := us.db.AutoMigrate(&User{}).Error; err != nil {
+		return err
+	}
+	return nil
 }
 
 // first will query using the provided gorm.DB pointer,
