@@ -28,6 +28,7 @@ func (u *Users) New(w http.ResponseWriter, r *http.Request) {
 }
 
 type SignupForm struct {
+	Name     string `schema:"name"`
 	Email    string `schema:"email"`
 	Password string `schema:"password"`
 }
@@ -41,5 +42,6 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	if err := parseForm(r, &form); err != nil {
 		panic(err)
 	}
-	fmt.Fprintln(w, form)
+	fmt.Fprintf(w, "Form: %+v", form) // echo to web page
+	fmt.Printf("Form: %+v", form)     // echo to stdout
 }
