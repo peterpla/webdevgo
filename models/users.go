@@ -5,6 +5,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
@@ -56,6 +57,13 @@ var (
 // and backfill gorm.Model data including the ID, CreatedAt, and
 // UpdatedAt fields.
 func (us *UserService) Create(user *User) error {
+	hasedBytes, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	user.PasswordHash = string(hasedBytes)
+	user.Password = ""
 	return us.db.Create(user).Error
 }
 
