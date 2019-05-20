@@ -20,6 +20,8 @@ type UserService struct {
 	db *gorm.DB
 }
 
+var userPwPepper = "secret-random-string"
+
 // NewUserService returns a connection to the database holding User objects
 func NewUserService(connectionInfo string) (*UserService, error) {
 	// log.Printf("enter NewUserService, connectionInfo: %s", connectionInfo)
@@ -57,12 +59,13 @@ var (
 // and backfill gorm.Model data including the ID, CreatedAt, and
 // UpdatedAt fields.
 func (us *UserService) Create(user *User) error {
-	hasedBytes, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	pwBytes := []byte(user.Password + userPwPepper)
+	hashedBytes, err := bcrypt.GenerateFromPassword(pwBytes, bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
 
-	user.PasswordHash = string(hasedBytes)
+	user.PasswordHash = string(hashedBytes)
 	user.Password = ""
 	return us.db.Create(user).Error
 }
