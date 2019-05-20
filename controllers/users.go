@@ -33,7 +33,7 @@ func (u *Users) New(w http.ResponseWriter, r *http.Request) {
 type SignupForm struct {
 	Name     string `schema:"name"`
 	Email    string `schema:"email"`
-	Age      int    `schema:"age"`
+	Age      uint   `schema:"age"` // new.gohtml enforces min=18, max=120
 	Password string `schema:"password"`
 }
 
