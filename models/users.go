@@ -13,6 +13,7 @@ type User struct {
 	gorm.Model
 	Name  string
 	Email string
+	Age   int
 }
 
 type UserService struct {
