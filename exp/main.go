@@ -27,7 +27,7 @@ type User struct { // database table "users"
 
 type Order struct {
 	gorm.Model
-	UserID      uint
+	UserID      int
 	Amount      int
 	Description string
 }
@@ -75,11 +75,11 @@ func main() {
 	fmt.Println(foundUser)
 
 	// Find using ByAge, verify found
-	foundUser, err = us.ByAge(uint(foundUser.Age))
+	foundUser, err = us.ByAge(foundUser.Age)
 	if err != nil {
 		panic("user with Age=32 was not found!")
 	}
-	// fmt.Printf("user from ByAge: %+v", foundUser)
+	fmt.Printf("user from ByAge: %+v", foundUser)
 
 	// Delete a user
 	if err = us.Delete(foundUser.ID); err != nil {

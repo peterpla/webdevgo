@@ -13,7 +13,7 @@ type User struct {
 	gorm.Model
 	Name  string
 	Email string
-	Age   int // new.gohtml enforces min=18, max=120
+	Age   uint // new.gohtml enforces min=18, max=120
 }
 
 type UserService struct {
