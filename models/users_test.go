@@ -2,51 +2,72 @@ package models
 
 import (
 	"fmt"
-	"log"
+	"os"
 	"testing"
 )
 
-func TestUsers(t *testing.T) {
-	log.Printf("entered TestUsers")
+const (
+	dbHost = "localhost"
+	dbPort = 5432
+	dbUser = "postgres"
+	dbName = "whatever_dev"
+)
 
-	testCases := []struct {
-		name           string
-		dbHost         string // "localhost"
-		dbPort         uint   // 5432
-		dbUser         string // "postgres"
-		dbSkipPassword bool   // true if skip password portion of connection string
-		dbPassword     string // ignored if dbSkipPassword == true
-		dbName         string // "whatever_dev"
-	}{
-		{"Basic pass", "localhost", 5432, "postgres", true, "", "ignore_test"},
-		{"Fail with bad password", "localhost", 5432, "postgres", false, "badPassword", "ignore_test"},
+var connStr string
+
+func TestMain(m *testing.M) {
+	connStr = fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable", dbHost, dbPort, dbUser, dbName)
+	os.Exit(m.Run())
+}
+
+func TestNewUserServiceByIDAndClose(t *testing.T) {
+	// connect to the user database
+	us, err := NewUserService(connStr)
+	if err != nil {
+		t.Fatalf("NewUser(psqlInfo): err = %v; want nil", err)
+	}
+	defer us.Close()
+
+	// call ByID(1) to confirm UserService is operational
+	// expect ErrNotFound from ByID(1)
+	if _, err = us.ByID(1); err != ErrNotFound {
+		t.Fatalf("us.ByID(1): expected \"%v\", got \"%v\"", ErrNotFound, err)
+	}
+}
+
+func TestCreateByEmailAndDelete(t *testing.T) {
+	// connect to the user database
+	us, err := NewUserService(connStr)
+	if err != nil {
+		t.Fatalf("NewUser(psqlInfo): expected nil, got = %v", err)
+	}
+	defer us.Close()
+
+	// Create a user
+	user := User{
+		Name:  "Test1 User",
+		Email: "test1@test.com",
+		Age:   18,
+	}
+	if err := us.Create(&user); err != nil {
+		t.Fatalf("us.Create(): expected nil, got = %v", err)
 	}
 
-	var psqlInfo string
-	for _, r := range testCases {
-		t.Run(r.name, func(t *testing.T) {
-			if r.dbSkipPassword {
-				// nil password, skip password portion of connection string
-				psqlInfo = fmt.Sprintf("host=%s port=%d user=%s "+
-					"dbname=%s sslmode=disable",
-					r.dbHost, r.dbPort, r.dbUser, r.dbName)
-			} else {
-				// include non-nil password in connection string
-				psqlInfo = fmt.Sprintf("host=%s port=%d user=%s password=%s "+
-					"dbname=%s sslmode=disable",
-					r.dbHost, r.dbPort, r.dbUser, r.dbPassword, r.dbName)
-			}
+	var foundRecord *User
 
-			// connect to the user database
-			us, err := NewUserService(psqlInfo)
-			if err != nil {
-				t.Log(err)
-				t.Fail()
-			}
-
-			// close the User Service connection created by NewUserService
-			us.Close()
-		})
+	// call ByEmail() to confirm that User was created
+	if foundRecord, err = us.ByEmail(user.Email); err != nil {
+		t.Fatalf("us.ByEmail(): expected \"%v\", got \"%v\"", ErrNotFound, err)
 	}
-	t.Fatalf("incomplete implementation, results invalid")
+
+	// delete that user
+	if err = us.Delete(foundRecord.Model.ID); err != nil {
+		t.Fatalf("us.Delete(): expected nil, got \"%v\"", err)
+	}
+
+	// confirm that user deleted by calling ByID()
+	if foundRecord, err = us.ByID(user.ID); err != ErrNotFound {
+		t.Fatalf("us.ByID(): expected \"%v\", got \"%v\"", ErrNotFound, err)
+	}
+
 }

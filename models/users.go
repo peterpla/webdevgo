@@ -2,8 +2,6 @@ package models
 
 import (
 	"errors"
-	"fmt"
-	"log"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -22,14 +20,14 @@ type UserService struct {
 
 // NewUserService returns a connection to the database holding User objects
 func NewUserService(connectionInfo string) (*UserService, error) {
-	log.Printf("enter NewUserService, connectionInfo: %s", connectionInfo)
+	// log.Printf("enter NewUserService, connectionInfo: %s", connectionInfo)
 	db, err := gorm.Open("postgres", connectionInfo)
 	if err != nil {
 		return nil, err
 	}
 	db.LogMode(true)
 	// postgresql://[user[:password]@][netloc][:port][/dbname]
-	fmt.Println("Successfully connected to database!")
+	// fmt.Println("Successfully connected to database!")
 
 	return &UserService{
 		db: db,
@@ -38,7 +36,7 @@ func NewUserService(connectionInfo string) (*UserService, error) {
 
 // Close the UserService database connection
 func (us *UserService) Close() error {
-	log.Printf("enter UserService.Close")
+	// log.Printf("enter UserService.Close")
 	return us.db.Close()
 }
 
