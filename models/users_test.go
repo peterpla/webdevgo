@@ -47,7 +47,6 @@ func TestCreateByEmailAndDelete(t *testing.T) {
 	user := User{
 		Name:  "Test1 User",
 		Email: "test1@test.com",
-		Age:   18,
 	}
 	if err := us.Create(&user); err != nil {
 		t.Fatalf("us.Create(): expected nil, got = %v", err)
