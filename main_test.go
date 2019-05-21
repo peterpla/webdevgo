@@ -1,15 +1,25 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"./controllers"
+	"./models"
 )
 
 func TestViewHandlers(t *testing.T) {
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
+		"dbname=%s sslmode=disable",
+		dbHost, dbPort, dbUser, dbName)
+	us, err := models.NewUserService(psqlInfo)
+	if err != nil {
+		panic(err)
+	}
+	defer us.Close()
 
 	type testset struct {
 		method   string
@@ -19,7 +29,7 @@ func TestViewHandlers(t *testing.T) {
 	}
 
 	staticC := controllers.NewStatic()
-	usersC := controllers.NewUsers()
+	usersC := controllers.NewUsers(us)
 	galleriesC := controllers.NewGalleries()
 
 	var tests = []testset{
