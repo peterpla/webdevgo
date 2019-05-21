@@ -30,6 +30,16 @@ func NotFound(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	// initialize views
+	homeView = views.NewView("bootstrap", "static/home")
+	contactView = views.NewView("bootstrap", "static/contact")
+	faqView = views.NewView("bootstrap", "static/faq")
+
+	// initialize controllers
+	staticC := controllers.NewStatic()
+	galleriesC := controllers.NewGalleries()
+
+	// the Users controller requires a UserService, make that happen
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
 		"dbname=%s sslmode=disable",
 		dbHost, dbPort, dbUser, dbName)
@@ -41,14 +51,9 @@ func main() {
 
 	us.AutoMigrate()
 
-	homeView = views.NewView("bootstrap", "static/home")
-	contactView = views.NewView("bootstrap", "static/contact")
-	faqView = views.NewView("bootstrap", "static/faq")
-
-	staticC := controllers.NewStatic()
 	usersC := controllers.NewUsers(us)
-	galleriesC := controllers.NewGalleries()
 
+	// define routing
 	r := mux.NewRouter()
 	r.Handle("/", staticC.Home).Methods("GET")
 	r.Handle("/contact", staticC.Contact).Methods("GET")
@@ -60,6 +65,8 @@ func main() {
 
 	r.Handle("/login", usersC.LoginView).Methods("GET")
 	r.HandleFunc("/login", usersC.Login).Methods("POST")
+
+	r.HandleFunc("/cookietest", usersC.CookieTest).Methods("GET")
 
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 
