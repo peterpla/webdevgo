@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"../models"
+	"../rand"
 	"../views"
 )
 
@@ -58,8 +59,21 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(w, "User is: %+v\n", user) // echo to web page
-	fmt.Printf("User is: %+v\n", user)     // echo to stdout
+	/*
+		fmt.Fprintf(w, "User is: %+v\n", user) // echo to web page
+		fmt.Printf("User is: %+v\n", user)     // echo to stdout
+	*/
+
+	// sign in the newly-created user
+	err := u.signIn(w, &user)
+	if err != nil {
+		// TODO: replace the temporary debugging message below
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// redirect to the cookie test page to test the cookie
+	http.Redirect(w, r, "/cookietest", http.StatusFound)
 }
 
 type LoginForm struct {
@@ -91,12 +105,42 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// successful Authenticate, sign in the user
+	err = u.signIn(w, user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/cookietest", http.StatusFound)
+}
+
+// signIn is used to sign in the given user via cookies
+func (u *Users) signIn(w http.ResponseWriter, user *models.User) error {
+	// the user argument should have been saved in the database earlier
+
+	// if a remember token was not provided, create one
+	if user.Remember == "" {
+		token, err := rand.RememberToken()
+		if err != nil {
+			return err
+		}
+		user.Remember = token
+
+		// update the user's database record with the new remember token
+		// so we can look it up later
+		err = u.us.Update(user)
+		if err != nil {
+			return err
+		}
+	}
+
+	// add the remember token to a cookie
 	cookie := http.Cookie{
-		Name:  "email",
-		Value: user.Email,
+		Name:  "remember_token",
+		Value: user.Remember,
 	}
 	http.SetCookie(w, &cookie)
-	fmt.Fprintln(w, user)
+	return nil
 }
 
 // CookieTest is used to display cookies set on the current user
