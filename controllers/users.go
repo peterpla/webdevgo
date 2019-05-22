@@ -136,14 +136,15 @@ func (u *Users) signIn(w http.ResponseWriter, user *models.User) error {
 
 	// add the remember token to a cookie
 	cookie := http.Cookie{
-		Name:  "remember_token",
-		Value: user.Remember,
+		Name:     "remember_token",
+		Value:    user.Remember,
+		HttpOnly: true,
 	}
 	http.SetCookie(w, &cookie)
 	return nil
 }
 
-// CookieTest is used to display the cookis set on the current user
+// CookieTest displays the cookie set on the current user
 func (u *Users) CookieTest(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("remember_token")
 	if err != nil {
