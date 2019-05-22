@@ -2,10 +2,14 @@ package models
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"golang.org/x/crypto/bcrypt"
+
+	"../hash"
+	"../rand"
 )
 
 type User struct {
@@ -14,13 +18,17 @@ type User struct {
 	Email        string `gorm:"not null;unique_index"`
 	Password     string `gorm:"-"`
 	PasswordHash string `gorm:"not null"`
+	Remember     string `gorm:"-"`
+	RememberHash string `gorm:"not null;unique_index"`
 }
 
 type UserService struct {
-	db *gorm.DB
+	db   *gorm.DB
+	hmac hash.HMAC
 }
 
-var userPwPepper = "secret-random-string"
+const hmacSecretKey = "secret-hmac-key"
+const userPwPepper = "secret-random-string"
 
 // NewUserService returns a connection to the database holding User objects
 func NewUserService(connectionInfo string) (*UserService, error) {
@@ -33,8 +41,11 @@ func NewUserService(connectionInfo string) (*UserService, error) {
 	// postgresql://[user[:password]@][netloc][:port][/dbname]
 	// fmt.Println("Successfully connected to database!")
 
+	hmac := hash.NewHMAC(hmacSecretKey)
+
 	return &UserService{
-		db: db,
+		db:   db,
+		hmac: hmac,
 	}, nil
 }
 
@@ -71,6 +82,18 @@ func (us *UserService) Create(user *User) error {
 
 	user.PasswordHash = string(hashedBytes)
 	user.Password = ""
+
+	if user.Remember == "" { // during Create/Sign Up processing, can user.Remember be non-empty?
+		token, err := rand.RememberToken()
+		if err != nil {
+			return err
+		}
+		user.Remember = token
+	} else {
+		fmt.Printf("user.Remember unexpectedly not empty: \"%s\"\n", user.Remember)
+	}
+	user.RememberHash = us.hmac.Hash(user.Remember)
+
 	return us.db.Create(user).Error
 }
 
@@ -140,6 +163,11 @@ func (us *UserService) ByEmail(email string) (*User, error) {
 // Update will update the provided user with all of the data
 // in the provided User object
 func (us *UserService) Update(user *User) error {
+	if user.Remember != "" {
+		user.RememberHash = us.hmac.Hash(user.Remember)
+	} else {
+		fmt.Println("user.Remember unexpectedly empty")
+	}
 	return us.db.Save(user).Error
 }
 
