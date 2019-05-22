@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 
-	"../rand"
+	"../hash"
 )
 
 func main() {
-	fmt.Println(rand.String(10))
-	fmt.Println(rand.RememberToken())
+	hmac := hash.NewHMAC("my-secret-key")
+	fmt.Println(hmac.Hash("this is my string to hash"))
 }
