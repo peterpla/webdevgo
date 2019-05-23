@@ -2,8 +2,12 @@ package models
 
 import (
 	"fmt"
+	"math"
+	"math/rand"
 	"os"
+	"strconv"
 	"testing"
+	"time"
 )
 
 const (
@@ -43,11 +47,20 @@ func TestCreateByEmailAndDelete(t *testing.T) {
 	}
 	defer us.Close()
 
-	// Create a user
+	// random 16-bit integer to add to test username
+	rand.Seed(time.Now().UnixNano())
+	rnd := rand.Intn(math.MaxUint16)
+	r := strconv.Itoa(rnd)
+
+	name := fmt.Sprintf("Test%s User", r)
+	email := fmt.Sprintf("test%s@test.com", r)
+
+	// Create a test user
 	user := User{
-		Name:  "Test1 User",
-		Email: "test1@test.com",
+		Name:  name,
+		Email: email,
 	}
+	// fmt.Printf("User: %+v", user)
 	if err := us.Create(&user); err != nil {
 		t.Fatalf("us.Create(): expected nil, got = %v", err)
 	}
@@ -64,7 +77,7 @@ func TestCreateByEmailAndDelete(t *testing.T) {
 		t.Fatalf("us.Delete(): expected nil, got \"%v\"", err)
 	}
 
-	// confirm that user deleted by calling ByID()
+	// confirm the created user was deleted by looking for their id
 	if foundRecord, err = us.ByID(user.ID); err != ErrNotFound {
 		t.Fatalf("us.ByID(): expected \"%v\", got \"%v\"", ErrNotFound, err)
 	}
