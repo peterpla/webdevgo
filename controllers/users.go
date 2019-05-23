@@ -65,6 +65,7 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	*/
 
 	// sign in the newly-created user
+	// remember token is NOT provided
 	err := u.signIn(w, &user)
 	if err != nil {
 		// TODO: replace the temporary debugging message below
@@ -72,7 +73,8 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// redirect to the cookie test page to test the cookie
+	// redirect to to pull Remember token from the user's cookie
+	// and confirm it matches stored RememberHash
 	http.Redirect(w, r, "/cookietest", http.StatusFound)
 }
 
@@ -105,36 +107,43 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// successful Authenticate, sign in the user
+	// SUCCESS from Authenticate, sign in the user
+	// Remember token is NOT populated in User object
 	err = u.signIn(w, user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// redirect to to pull Remember token from the user's cookie
+	// and confirm it matches stored RememberHash
 	http.Redirect(w, r, "/cookietest", http.StatusFound)
 }
 
-// signIn is used to sign in the given user via cookies
+// signIn is used to sign in the given user, confirming the Remember token
+// from the user's cookie hashes to the RememberHash value stored in the user's
+// DB record
 func (u *Users) signIn(w http.ResponseWriter, user *models.User) error {
-	// the user argument should have been saved in the database earlier
+	// at Signup/Create, the user was saved in the database
 
-	// if a remember token was not provided, create one
-	if user.Remember == "" {
-		token, err := rand.RememberToken()
+	if user.Remember == "" { //
+		token, err := rand.RememberToken() // generate a new Remember token
 		if err != nil {
 			return err
 		}
 		user.Remember = token
 
-		// update the user's database record with the new remember token
-		// so we can look it up later
-		err = u.us.Update(user)
+		// update the user's record with the RememberHash (but NOT the Remember token!)
+		// and write the user's record to the DB so we can look it up later
+		err = u.us.UpdateWithRememberHash(user)
 		if err != nil {
 			return err
 		}
+	} else {
+		fmt.Printf("user.Remember unexpectedly not empty: \"%s\"\n", user.Remember)
 	}
 
-	// add the remember token to a cookie
+	// add the remember token to a cookie, the only place it is stored
 	cookie := http.Cookie{
 		Name:     "remember_token",
 		Value:    user.Remember,

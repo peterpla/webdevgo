@@ -70,8 +70,9 @@ var (
 	ErrInvalidPassword = errors.New("models: incorrect password provided")
 )
 
-// Create will create the provided User record in the database,
-// and backfill gorm.Model data including the ID, CreatedAt, and
+// Create expects the Name, Email and Password fields to be populated, and
+// will populate the remaining fields before creating the  User record in the database.
+// GORM will populate the gorm.Model data including the ID, CreatedAt, and
 // UpdatedAt fields.
 func (us *UserService) Create(user *User) error {
 	pwBytes := []byte(user.Password + userPwPepper)
@@ -80,19 +81,19 @@ func (us *UserService) Create(user *User) error {
 		return err
 	}
 
-	user.PasswordHash = string(hashedBytes)
-	user.Password = ""
+	user.PasswordHash = string(hashedBytes) // store the PasswordHash in the database
+	user.Password = ""                      // ... but overwrite the Password immediately (does not reach DB)
 
-	if user.Remember == "" { // during Create/Sign Up processing, can user.Remember be non-empty?
+	if user.Remember == "" { // created/populated at login, so expected to be empty
 		token, err := rand.RememberToken()
 		if err != nil {
 			return err
 		}
-		user.Remember = token
+		user.Remember = token // store in the DB
 	} else {
 		fmt.Printf("user.Remember unexpectedly not empty: \"%s\"\n", user.Remember)
 	}
-	user.RememberHash = us.hmac.Hash(user.Remember)
+	user.RememberHash = us.hmac.Hash(user.Remember) // store in the DB, will be
 
 	return us.db.Create(user).Error
 }
@@ -113,13 +114,14 @@ func (us *UserService) Authenticate(email string, password string) (*User, error
 		return nil, err // pass on ByEmail's error return, email not found in the database
 	}
 
+	// test the provided password against the stored PasswordHash
 	err = bcrypt.CompareHashAndPassword(
 		[]byte(foundUser.PasswordHash),
 		[]byte(password+userPwPepper))
 
 	switch err {
 	case nil:
-		return foundUser, nil // success, return user
+		return foundUser, nil // SUCCESS, return user populated with fields from DB
 	case bcrypt.ErrMismatchedHashAndPassword:
 		return nil, ErrInvalidPassword // password did not produce matching hash
 	default:
@@ -174,14 +176,15 @@ func (us *UserService) ByRemember(token string) (*User, error) {
 	return &user, nil
 }
 
-// Update will update the provided user with all of the data
-// in the provided User object
-func (us *UserService) Update(user *User) error {
+// UpdateWithRememberHash will update the user's DB record with the
+// RememberHash value from the Remember field of the provided User object
+func (us *UserService) UpdateWithRememberHash(user *User) error {
 	if user.Remember != "" {
 		user.RememberHash = us.hmac.Hash(user.Remember)
 	} else {
 		fmt.Println("user.Remember unexpectedly empty")
 	}
+	// save the updated user record (with RememberHash) to the DB
 	return us.db.Save(user).Error
 }
 

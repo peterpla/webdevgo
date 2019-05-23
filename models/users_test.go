@@ -28,9 +28,9 @@ func TestNewUserServiceByIDAndClose(t *testing.T) {
 	}
 	defer us.Close()
 
-	// call ByID(1) to confirm UserService is operational
-	// expect ErrNotFound from ByID(1)
-	if _, err = us.ByID(1); err != ErrNotFound {
+	// call ByEmail("bozo@clown.net") to confirm UserService is operational
+	// expect ErrNotFound from ByEmail
+	if _, err = us.ByEmail("bozo@clown.net"); err != ErrNotFound {
 		t.Fatalf("us.ByID(1): expected \"%v\", got \"%v\"", ErrNotFound, err)
 	}
 }
