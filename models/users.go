@@ -186,6 +186,7 @@ func (us *userService) Authenticate(email string, password string) (*User, error
 // normalized, and will create the user database record, populating
 // the gorm.Model data including the ID, CreatedAt, and UpdatedAt fields.
 func (ug *userGorm) Create(user *User) error {
+	fmt.Printf("enter Create, user=%+v\n", user)
 	return ug.db.Create(user).Error
 }
 
@@ -199,12 +200,14 @@ func (ug *userGorm) Create(user *User) error {
 // As a general rule, any error but ErrNotFound should
 // probably result in a 500 error.
 func (ug *userGorm) ByID(id uint) (*User, error) {
+	fmt.Printf("enter ByID, id=%d\n", id)
 	var user User
 	db := ug.db.Where("id = ?", id)
 	err := first(db, &user)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("exit ByID, user:%+v\n", user)
 	return &user, nil
 }
 
@@ -216,9 +219,11 @@ func (ug *userGorm) ByID(id uint) (*User, error) {
 // more information about what went wrong. This may not be
 // an error genereated by the models package.
 func (ug *userGorm) ByEmail(email string) (*User, error) {
+	fmt.Printf("enter ByEmail, email=%s\n", email)
 	var user User
 	db := ug.db.Where("email = ?", email)
 	err := first(db, &user)
+	fmt.Printf("exit ByEmail, user:%+v\n", user)
 	return &user, err
 }
 
@@ -226,11 +231,13 @@ func (ug *userGorm) ByEmail(email string) (*User, error) {
 // that user.
 // Errors are the same as ByEmail above
 func (ug *userGorm) ByRemember(rememberHash string) (*User, error) {
+	fmt.Printf("enter ByRemember, rememberHash=%s\n", rememberHash)
 	var user User
 	err := first(ug.db.Where("remember_hash = ?", rememberHash), &user)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("exit ByRemember, user:%+v\n", user)
 	return &user, nil
 }
 
@@ -238,13 +245,16 @@ func (ug *userGorm) ByRemember(rememberHash string) (*User, error) {
 // validated and normalized, and will update the user's DB record with the
 // provided User object
 func (ug *userGorm) UpdateWithRememberHash(user *User) error {
+	fmt.Printf("enter UpdateWithRememberHash, user=%+v\n", user)
 	return ug.db.Save(user).Error
 }
 
 // Delete expects the user ID to be validated and normalized, and will
 // delete the user with the provided ID
 func (ug *userGorm) Delete(id uint) error {
+	fmt.Printf("enter Delete, id=%d\n", id)
 	user := User{Model: gorm.Model{ID: id}}
+	fmt.Printf("calling ug.db.Delete passing user=%+v\n", user)
 	return ug.db.Delete(&user).Error
 }
 
@@ -279,33 +289,32 @@ func (ug *userGorm) AutoMigrate() error {
 // value with an empty string, set the remember token and hash; then pass to the
 // database layer to create the user record in the database
 func (uv *userValidator) Create(user *User) error {
-	pwBytes := []byte(user.Password + userPwPepper)
-	hashedBytes, err := bcrypt.GenerateFromPassword(pwBytes, bcrypt.DefaultCost)
-	if err != nil {
+	if user.Password == "" {
+		panic(ErrInvalidPassword)
+	}
+	if err := runUserValFns(user, uv.bcryptPassword); err != nil {
 		return err
 	}
-
-	user.PasswordHash = string(hashedBytes) // store the PasswordHash in the database
-	user.Password = ""                      // ... but overwrite the Password immediately (does not reach DB)
-
 	if user.Remember == "" { // created/populated at login, so expected to be empty
 		token, err := rand.RememberToken()
 		if err != nil {
 			return err
 		}
-		user.Remember = token // store in the DB
+		user.Remember = token
 	} else {
 		fmt.Printf("user.Remember unexpectedly not empty: \"%s\"\n", user.Remember)
 	}
-	user.RememberHash = uv.hmac.Hash(user.Remember) // store in the DB, will be
-
+	user.RememberHash = uv.hmac.Hash(user.Remember)
 	return uv.UserDB.Create(user)
-
 }
 
 // Update will set (normalize) the remember hash, then pass to the database layer to
 // update the user record in the database.
 func (uv *userValidator) Update(user *User) error {
+	if err := runUserValFns(user, uv.bcryptPassword); err != nil {
+		return err
+	}
+
 	if user.Remember != "" {
 		user.RememberHash = uv.hmac.Hash(user.Remember)
 	} else {
@@ -328,6 +337,42 @@ func (uv *userValidator) Delete(id uint) error {
 func (uv *userValidator) ByRemember(token string) (*User, error) {
 	rememberHash := uv.hmac.Hash(token)
 	return uv.UserDB.ByRemember(rememberHash)
+}
+
+/* ********** ********** ********** */
+/*       userValidator helpers      */
+
+// all user validation/normalization functions implement this signature
+// to simplify runUserValFns
+type userValFn func(*User) error
+
+// iterate through the sequence of userValFn-conforming validation/normalization functions
+func runUserValFns(user *User, fns ...userValFn) error {
+	for _, fn := range fns {
+		if err := fn(user); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// bcryptPassword will hash a user's password with an
+// app-wide pepper and becrypt, which salts for us
+func (uv *userValidator) bcryptPassword(user *User) error {
+	if user.Password == "" {
+		// Nothing to do if a new password wasn't provided.
+		return nil
+	}
+
+	pwBytes := []byte(user.Password + userPwPepper)
+	hashedBytes, err := bcrypt.GenerateFromPassword(pwBytes, bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	user.PasswordHash = string(hashedBytes) // save the PasswordHash in the user object
+	user.Password = ""                      // ... but overwrite the Password immediately (does not reach DB)
+	return nil
 }
 
 /* ********** ********** ********** */
