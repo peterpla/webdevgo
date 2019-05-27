@@ -30,6 +30,10 @@ type userValidator struct {
 	hmac hash.HMAC
 }
 
+// a compile-time error below indicates the UserDB type no longer matches
+// the userGorm interface. They should match.
+var _ UserDB = &userGorm{}
+
 // UserDB is used to interact with the users database
 //
 // For pretty much all single user queries:
@@ -60,6 +64,12 @@ type UserDB interface {
 	DestructiveReset() error
 }
 
+// userGorm represents our database interaction layer
+// and implements the UserDB interface fully
+type userGorm struct {
+	db *gorm.DB
+}
+
 // a compile-time error below indicates the userService type no longer matches
 // the UserService interface. They should match.
 var _ UserService = &userService{}
@@ -79,17 +89,6 @@ type userService struct {
 	UserDB
 }
 
-// a compile-time error below indicates the UserDB type no longer matches
-// the userGorm interface. They should match.
-var _ UserDB = &userGorm{}
-
-// userGorm represents our database interaction layer
-// and implements the UserDB interface fully
-type userGorm struct {
-	db   *gorm.DB
-	hmac hash.HMAC
-}
-
 const hmacSecretKey = "secret-hmac-key"
 const userPwPepper = "secret-random-string"
 
@@ -102,10 +101,8 @@ func newUserGorm(connectionInfo string) (*userGorm, error) {
 		return nil, err
 	}
 	db.LogMode(true)
-	hmac := hash.NewHMAC(hmacSecretKey)
 	return &userGorm{
-		db:   db,
-		hmac: hmac,
+		db: db,
 	}, nil
 }
 
@@ -133,12 +130,6 @@ func NewUserService(connectionInfo string) (UserService, error) {
 	}, nil
 }
 
-// Close the UserService database connection
-func (ug *userGorm) Close() error {
-	// log.Printf("enter UserService.Close")
-	return ug.db.Close()
-}
-
 var (
 	// ErrNotFound is returned when the query executes successfully
 	// but returned zero rows. I.e., the resource cannot be found
@@ -154,33 +145,8 @@ var (
 	ErrInvalidPassword = errors.New("models: incorrect password provided")
 )
 
-// Create expects the Name, Email and Password fields to be populated, and
-// will populate the remaining fields before creating the  User record in the database.
-// GORM will populate the gorm.Model data including the ID, CreatedAt, and
-// UpdatedAt fields.
-func (ug *userGorm) Create(user *User) error {
-	pwBytes := []byte(user.Password + userPwPepper)
-	hashedBytes, err := bcrypt.GenerateFromPassword(pwBytes, bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-
-	user.PasswordHash = string(hashedBytes) // store the PasswordHash in the database
-	user.Password = ""                      // ... but overwrite the Password immediately (does not reach DB)
-
-	if user.Remember == "" { // created/populated at login, so expected to be empty
-		token, err := rand.RememberToken()
-		if err != nil {
-			return err
-		}
-		user.Remember = token // store in the DB
-	} else {
-		fmt.Printf("user.Remember unexpectedly not empty: \"%s\"\n", user.Remember)
-	}
-	user.RememberHash = ug.hmac.Hash(user.Remember) // store in the DB, will be
-
-	return ug.db.Create(user).Error
-}
+/* ********** ********** ********** */
+/*         userService methods      */
 
 // Authenticate will authenticate a user using the
 // provided email address and password.
@@ -211,6 +177,16 @@ func (us *userService) Authenticate(email string, password string) (*User, error
 	default:
 		return nil, err // some other error
 	}
+}
+
+/* ********** ********** ********** */
+/*            userGorm methods      */
+
+// Create expects the Name, Email and Password fields to validated and
+// normalized, and will create the user database record, populating
+// the gorm.Model data including the ID, CreatedAt, and UpdatedAt fields.
+func (ug *userGorm) Create(user *User) error {
+	return ug.db.Create(user).Error
 }
 
 // ByID will look up a user with the provided ID.
@@ -258,32 +234,24 @@ func (ug *userGorm) ByRemember(rememberHash string) (*User, error) {
 	return &user, nil
 }
 
-// UpdateWithRememberHash will update the user's DB record with the
-// RememberHash value from the Remember field of the provided User object
+// UpdateWithRememberHash expects the Name, Email and Password fields to be
+// validated and normalized, and will update the user's DB record with the
+// provided User object
 func (ug *userGorm) UpdateWithRememberHash(user *User) error {
-	if user.Remember != "" {
-		user.RememberHash = ug.hmac.Hash(user.Remember)
-	} else {
-		fmt.Println("user.Remember unexpectedly empty")
-	}
-	// save the updated user record (with RememberHash) to the DB
 	return ug.db.Save(user).Error
 }
 
-// Delete will delete the user with the provided ID
+// Delete expects the user ID to be validated and normalized, and will
+// delete the user with the provided ID
 func (ug *userGorm) Delete(id uint) error {
-	if id == 0 {
-		return ErrInvalidID
-	}
 	user := User{Model: gorm.Model{ID: id}}
 	return ug.db.Delete(&user).Error
 }
 
-// ByRemember normalization: hash the remember token and then pass it
-// to UserDB's ByRemember
-func (uv *userValidator) ByRemember(token string) (*User, error) {
-	rememberHash := uv.hmac.Hash(token)
-	return uv.UserDB.ByRemember(rememberHash)
+// Close the userGorm database connection
+func (ug *userGorm) Close() error {
+	// log.Printf("enter UserService.Close")
+	return ug.db.Close()
 }
 
 // DestructiveReset drops the user table and rebuilds it
@@ -303,6 +271,67 @@ func (ug *userGorm) AutoMigrate() error {
 	}
 	return nil
 }
+
+/* ********** ********** ********** */
+/*       userValidator methods      */
+
+// Create will validate arguments, create the password hash, overwrite the password
+// value with an empty string, set the remember token and hash; then pass to the
+// database layer to create the user record in the database
+func (uv *userValidator) Create(user *User) error {
+	pwBytes := []byte(user.Password + userPwPepper)
+	hashedBytes, err := bcrypt.GenerateFromPassword(pwBytes, bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	user.PasswordHash = string(hashedBytes) // store the PasswordHash in the database
+	user.Password = ""                      // ... but overwrite the Password immediately (does not reach DB)
+
+	if user.Remember == "" { // created/populated at login, so expected to be empty
+		token, err := rand.RememberToken()
+		if err != nil {
+			return err
+		}
+		user.Remember = token // store in the DB
+	} else {
+		fmt.Printf("user.Remember unexpectedly not empty: \"%s\"\n", user.Remember)
+	}
+	user.RememberHash = uv.hmac.Hash(user.Remember) // store in the DB, will be
+
+	return uv.UserDB.Create(user)
+
+}
+
+// Update will set (normalize) the remember hash, then pass to the database layer to
+// update the user record in the database.
+func (uv *userValidator) Update(user *User) error {
+	if user.Remember != "" {
+		user.RememberHash = uv.hmac.Hash(user.Remember)
+	} else {
+		fmt.Println("user.Remember unexpectedly empty")
+	}
+	return uv.UserDB.UpdateWithRememberHash(user)
+}
+
+// Delete will validate the provided user ID, then pass to the database layer to
+// delete the user record from the database.
+func (uv *userValidator) Delete(id uint) error {
+	if id == 0 { // uint so cannot be <0
+		return ErrInvalidID
+	}
+	return uv.UserDB.Delete(id)
+}
+
+// ByRemember normalization: hash the remember token and then pass it
+// to UserDB's ByRemember
+func (uv *userValidator) ByRemember(token string) (*User, error) {
+	rememberHash := uv.hmac.Hash(token)
+	return uv.UserDB.ByRemember(rememberHash)
+}
+
+/* ********** ********** ********** */
+/*            helper methods        */
 
 // first will query using the provided gorm.DB pointer,
 // get the first item returned, and store it into dst. If
