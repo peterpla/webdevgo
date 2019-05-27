@@ -29,10 +29,6 @@ type userValidator struct {
 	UserDB
 }
 
-type UserService struct {
-	UserDB
-}
-
 // UserDB is used to interact with the users database
 //
 // For pretty much all single user queries:
@@ -63,6 +59,25 @@ type UserDB interface {
 	DestructiveReset() error
 }
 
+// UserService interface methods are used to work with the user model
+type UserService interface {
+	// Authenticate verifies the provided email address and
+	// password are correct.
+	// If correct, return the corresponding user and nil.
+	// Otherwise, return ErrNotFound, ErrInvalidPassword, or
+	// pass along an error received from deeper in the stack.
+	Authenticate(email string, password string) (*User, error)
+	UserDB
+}
+
+type userService struct {
+	UserDB
+}
+
+// a compile-time error below indicates the UserDB type no longer matches
+// the userGorm interface. They should match.
+var _ UserDB = &userGorm{}
+
 // userGorm represents our database interaction layer
 // and implements the UserDB interface fully
 type userGorm struct {
@@ -89,18 +104,21 @@ func newUserGorm(connectionInfo string) (*userGorm, error) {
 	}, nil
 }
 
-// NewUserService returns a pointer to a new UserService instance,
-// the API other packages will use to access the user database.
+// NewUserService returns a UserService INTERFACE that other
+// packages will use to access the user database.
 //
 // To change to a NoSQL database, replace the newUserGorm call with
 // a comparable call to open a different database.
-func NewUserService(connectionInfo string) (*UserService, error) {
+func NewUserService(connectionInfo string) (UserService, error) {
 	// log.Printf("enter NewUserService, connectionInfo: %s", connectionInfo)
 	ug, err := newUserGorm(connectionInfo)
 	if err != nil {
 		return nil, err
 	}
-	return &UserService{
+
+	// MAGIC: somehow returning the address of a userService is equivalent to
+	// returning a UserService interface ???
+	return &userService{
 		UserDB: userValidator{
 			UserDB: ug,
 		},
@@ -166,7 +184,7 @@ func (ug *userGorm) Create(user *User) error {
 //   user, nil
 // If there is another error, return
 //   nil, error
-func (us *UserService) Authenticate(email string, password string) (*User, error) {
+func (us *userService) Authenticate(email string, password string) (*User, error) {
 	foundUser, err := us.ByEmail(email)
 	if err != nil {
 		return nil, err // pass on ByEmail's error return, email not found in the database
