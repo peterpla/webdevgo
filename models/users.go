@@ -22,11 +22,12 @@ type User struct {
 	RememberHash string `gorm:"not null;unique_index"`
 }
 
-// userValidator is our validation layer that validates
-// and normalizes data before passing it on to the next
-// UserDB in our interface chain
+// userValidator is our validation/normalization layer that
+// validates and normalizes data before passing it along our
+// interface chain
 type userValidator struct {
 	UserDB
+	hmac hash.HMAC
 }
 
 // UserDB is used to interact with the users database
@@ -120,12 +121,15 @@ func NewUserService(connectionInfo string) (UserService, error) {
 		return nil, err
 	}
 
+	hmac := hash.NewHMAC(hmacSecretKey)
+	uv := &userValidator{
+		hmac:   hmac,
+		UserDB: ug,
+	}
 	// MAGIC: somehow returning the address of a userService is equivalent to
 	// returning a UserService interface ???
 	return &userService{
-		UserDB: userValidator{
-			UserDB: ug,
-		},
+		UserDB: uv,
 	}, nil
 }
 
@@ -242,13 +246,11 @@ func (ug *userGorm) ByEmail(email string) (*User, error) {
 	return &user, err
 }
 
-// ByRemember looks up a user with the given remember token
-// and returns that user. This method will handle hasning
-// the token for us.
+// ByRemember looks up a user by remember token hash and returns
+// that user.
 // Errors are the same as ByEmail above
-func (ug *userGorm) ByRemember(token string) (*User, error) {
+func (ug *userGorm) ByRemember(rememberHash string) (*User, error) {
 	var user User
-	rememberHash := ug.hmac.Hash(token)
 	err := first(ug.db.Where("remember_hash = ?", rememberHash), &user)
 	if err != nil {
 		return nil, err
@@ -275,6 +277,13 @@ func (ug *userGorm) Delete(id uint) error {
 	}
 	user := User{Model: gorm.Model{ID: id}}
 	return ug.db.Delete(&user).Error
+}
+
+// ByRemember normalization: hash the remember token and then pass it
+// to UserDB's ByRemember
+func (uv *userValidator) ByRemember(token string) (*User, error) {
+	rememberHash := uv.hmac.Hash(token)
+	return uv.UserDB.ByRemember(rememberHash)
 }
 
 // DestructiveReset drops the user table and rebuilds it
