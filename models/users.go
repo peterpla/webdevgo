@@ -59,6 +59,10 @@ type UserDB interface {
 	DestructiveReset() error
 }
 
+// a compile-time error below indicates the userService type no longer matches
+// the UserService interface. They should match.
+var _ UserService = &userService{}
+
 // UserService interface methods are used to work with the user model
 type UserService interface {
 	// Authenticate verifies the provided email address and
