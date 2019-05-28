@@ -76,6 +76,10 @@ var (
 	// to a method like Delete.
 	ErrIDInvalid = errors.New("models: ID provided was invalid")
 
+	// ErrPasswordTooShort is returned when a user specifies a password
+	// shorter than 8 characters
+	ErrPasswordTooShort = errors.New("models: password must be at least 8 characters long")
+
 	// ErrPasswordIncorrect is returned when an invalid password
 	// is dtected when attempting to authenticate a user.
 	ErrPasswordIncorrect = errors.New("models: incorrect password provided")
@@ -314,6 +318,7 @@ func (uv *userValidator) Create(user *User) error {
 		}
 	*/
 	err := runUserValFns(user,
+		uv.passwordMinLength, // must be run before bcryptPassword
 		uv.bcryptPassword,
 		uv.setRememberIfUnset,
 		uv.hmacRemember,
@@ -331,6 +336,7 @@ func (uv *userValidator) Create(user *User) error {
 // update the user record in the database.
 func (uv *userValidator) Update(user *User) error {
 	err := runUserValFns(user,
+		uv.passwordMinLength, // must be run before bcryptPassword
 		uv.bcryptPassword,
 		uv.hmacRemember,
 		uv.normalizeEmail,
@@ -459,6 +465,17 @@ func (uv *userValidator) emailIsAvail(user *User) error {
 		return ErrEmailTaken
 	}
 	return nil // user is updating their existing email address
+}
+
+// ensure password meets minimum length requirement
+func (uv *userValidator) passwordMinLength(user *User) error {
+	if user.Password == "" { // password required handled elsewhere
+		return nil
+	}
+	if len(user.Password) < 8 {
+		return ErrPasswordTooShort
+	}
+	return nil
 }
 
 /* ********** ********** ********** */
