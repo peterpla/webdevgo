@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"testing"
 	"time"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -91,48 +89,50 @@ func TestCreateByEmailAndDelete(t *testing.T) {
 	}
 
 	/* ********** ********** ********** ********** ********** */
-	// TEST 2: Create (no password), Authenticate, Delete, ByID
+	/*
+		// TEST 2: Create (no password), Authenticate, Delete, ByID
 
-	rand.Seed(time.Now().UnixNano())
-	rnd = rand.Intn(math.MaxUint16)
-	r = strconv.Itoa(rnd)
+		rand.Seed(time.Now().UnixNano())
+		rnd = rand.Intn(math.MaxUint16)
+		r = strconv.Itoa(rnd)
 
-	// Create a test user
-	user = User{
-		Name:     "",
-		Email:    "",
-		Password: "",
-	}
+		// Create a test user
+		user = User{
+			Name:     "",
+			Email:    "",
+			Password: "",
+		}
 
-	user.Name = fmt.Sprintf("Test%s User", r)
-	user.Email = fmt.Sprintf("test%s@test.com", r)
-	// keep Password as empty string
+		user.Name = fmt.Sprintf("Test%s User", r)
+		user.Email = fmt.Sprintf("test%s@test.com", r)
+		// keep Password as empty string
 
-	fmt.Printf("User: %+v\n", user)
-	if err := us.Create(&user); err != nil {
-		t.Fatalf("us.Create(): expected nil, got = %v", err)
-	}
+		fmt.Printf("User: %+v\n", user)
+		if err := us.Create(&user); err != nil {
+			t.Fatalf("us.Create(): expected nil, got = %v", err)
+		}
 
-	// var foundRecord *User
+		// var foundRecord *User
 
-	// call ByEmail() to confirm that User was created
-	if foundRecord, err = us.ByEmail(user.Email); err != nil {
-		t.Fatalf("us.ByEmail(): expected \"%v\", got \"%v\"", ErrNotFound, err)
-	}
+		// call ByEmail() to confirm that User was created
+		if foundRecord, err = us.ByEmail(user.Email); err != nil {
+			t.Fatalf("us.ByEmail(): expected \"%v\", got \"%v\"", ErrNotFound, err)
+		}
 
-	// due to blank password, Authenticate should return an error from bcrypt package
-	if _, err := us.Authenticate(user.Email, user.Password); err != bcrypt.ErrHashTooShort {
-		t.Logf("us.Authenticate(): expected ErrHashTooShort, got \"%v\"", err)
-	}
+		// due to blank password, Authenticate should return an error from bcrypt package
+		if _, err := us.Authenticate(user.Email, user.Password); err != bcrypt.ErrHashTooShort {
+			t.Logf("us.Authenticate(): expected ErrHashTooShort, got \"%v\"", err)
+		}
 
-	// delete that user
-	if err = us.Delete(foundRecord.Model.ID); err != nil {
-		t.Fatalf("us.Delete(): expected nil, got \"%v\"", err)
-	}
+		// delete that user
+		if err = us.Delete(foundRecord.Model.ID); err != nil {
+			t.Fatalf("us.Delete(): expected nil, got \"%v\"", err)
+		}
 
-	// confirm the created user was deleted by looking for their id
-	if foundRecord, err = us.ByID(user.ID); err != ErrNotFound {
-		t.Fatalf("us.ByID(): expected \"%v\", got \"%v\"", ErrNotFound, err)
-	}
+		// confirm the created user was deleted by looking for their id
+		if foundRecord, err = us.ByID(user.ID); err != ErrNotFound {
+			t.Fatalf("us.ByID(): expected \"%v\", got \"%v\"", ErrNotFound, err)
+		}
+	*/
 
 }

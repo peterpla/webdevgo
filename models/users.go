@@ -53,7 +53,7 @@ type UserDB interface {
 
 	// Methods for altering a single user
 	Create(user *User) error
-	UpdateWithRememberHash(user *User) error
+	Update(user *User) error
 	Delete(id uint) error
 
 	// Close a database connection
@@ -241,11 +241,11 @@ func (ug *userGorm) ByRemember(rememberHash string) (*User, error) {
 	return &user, nil
 }
 
-// UpdateWithRememberHash expects the Name, Email and Password fields to be
+// Update expects the Name, Email and Password fields to be
 // validated and normalized, and will update the user's DB record with the
 // provided User object
-func (ug *userGorm) UpdateWithRememberHash(user *User) error {
-	fmt.Printf("enter UpdateWithRememberHash, user=%+v\n", user)
+func (ug *userGorm) Update(user *User) error {
+	fmt.Printf("enter Update, user=%+v\n", user)
 	return ug.db.Save(user).Error
 }
 
@@ -292,9 +292,6 @@ func (uv *userValidator) Create(user *User) error {
 	if user.Password == "" {
 		panic(ErrInvalidPassword)
 	}
-	if err := runUserValFns(user, uv.bcryptPassword); err != nil {
-		return err
-	}
 	if user.Remember == "" { // created/populated at login, so expected to be empty
 		token, err := rand.RememberToken()
 		if err != nil {
@@ -304,23 +301,20 @@ func (uv *userValidator) Create(user *User) error {
 	} else {
 		fmt.Printf("user.Remember unexpectedly not empty: \"%s\"\n", user.Remember)
 	}
-	user.RememberHash = uv.hmac.Hash(user.Remember)
+
+	if err := runUserValFns(user, uv.bcryptPassword, uv.hmacRemember); err != nil {
+		return err
+	}
 	return uv.UserDB.Create(user)
 }
 
 // Update will set (normalize) the remember hash, then pass to the database layer to
 // update the user record in the database.
 func (uv *userValidator) Update(user *User) error {
-	if err := runUserValFns(user, uv.bcryptPassword); err != nil {
+	if err := runUserValFns(user, uv.bcryptPassword, uv.hmacRemember); err != nil {
 		return err
 	}
-
-	if user.Remember != "" {
-		user.RememberHash = uv.hmac.Hash(user.Remember)
-	} else {
-		fmt.Println("user.Remember unexpectedly empty")
-	}
-	return uv.UserDB.UpdateWithRememberHash(user)
+	return uv.UserDB.Update(user)
 }
 
 // Delete will validate the provided user ID, then pass to the database layer to
@@ -335,8 +329,22 @@ func (uv *userValidator) Delete(id uint) error {
 // ByRemember normalization: hash the remember token and then pass it
 // to UserDB's ByRemember
 func (uv *userValidator) ByRemember(token string) (*User, error) {
-	rememberHash := uv.hmac.Hash(token)
-	return uv.UserDB.ByRemember(rememberHash)
+	user := User{
+		Remember: token,
+	}
+	if err := runUserValFns(&user, uv.hmacRemember); err != nil {
+		return nil, err
+	}
+	return uv.UserDB.ByRemember(user.RememberHash)
+}
+
+// hmacRemember calculates and stores the remember token hash
+func (uv *userValidator) hmacRemember(user *User) error {
+	if user.Remember == "" {
+		return nil
+	}
+	user.RememberHash = uv.hmac.Hash(user.Remember)
+	return nil
 }
 
 /* ********** ********** ********** */

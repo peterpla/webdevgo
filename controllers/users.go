@@ -135,7 +135,7 @@ func (u *Users) signIn(w http.ResponseWriter, user *models.User) error {
 
 		// update the user's record with the RememberHash (but NOT the Remember token!)
 		// and write the user's record to the DB so we can look it up later
-		err = u.us.UpdateWithRememberHash(user)
+		err = u.us.Update(user)
 		if err != nil {
 			return err
 		}
