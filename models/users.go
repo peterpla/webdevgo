@@ -65,6 +65,25 @@ type UserDB interface {
 	DestructiveReset() error
 }
 
+var (
+	// ErrNotFound is returned when the query executes successfully
+	// but returned zero rows. I.e., the resource cannot be found
+	// in the database.
+	ErrNotFound = errors.New("models: resource not found")
+
+	// ErrInvalidID is returned when an invalid ID is provided
+	// to a method like Delete.
+	ErrInvalidID = errors.New("models: ID provided was invalid")
+
+	// ErrInvalidPassword is returned when an invalid password
+	// is dtected when attempting to authenticate a user.
+	ErrInvalidPassword = errors.New("models: incorrect password provided")
+
+	// ErrEmailRequires is returned when an email address is not
+	// provided when creating a user
+	ErrEmailRequired = errors.New("models: email address is required")
+)
+
 // userGorm represents our database interaction layer
 // and implements the UserDB interface fully
 type userGorm struct {
@@ -130,21 +149,6 @@ func NewUserService(connectionInfo string) (UserService, error) {
 		UserDB: uv,
 	}, nil
 }
-
-var (
-	// ErrNotFound is returned when the query executes successfully
-	// but returned zero rows. I.e., the resource cannot be found
-	// in the database.
-	ErrNotFound = errors.New("models: resource not found")
-
-	// ErrInvalidID is returned when an invalid ID is provided
-	// to a method like Delete.
-	ErrInvalidID = errors.New("models: ID provided was invalid")
-
-	// ErrInvalidPassword is returned when an invalid password
-	// is dtected when attempting to authenticate a user.
-	ErrInvalidPassword = errors.New("models: incorrect password provided")
-)
 
 /* ********** ********** ********** */
 /*         userService methods      */
@@ -295,7 +299,12 @@ func (uv *userValidator) Create(user *User) error {
 			panic(ErrInvalidPassword)
 		}
 	*/
-	err := runUserValFns(user, uv.bcryptPassword, uv.setRememberIfUnset, uv.hmacRemember, uv.normalizeEmail)
+	err := runUserValFns(user,
+		uv.bcryptPassword,
+		uv.setRememberIfUnset,
+		uv.hmacRemember,
+		uv.normalizeEmail,
+		uv.requireEmail)
 	if err != nil {
 		return err
 	}
@@ -305,7 +314,12 @@ func (uv *userValidator) Create(user *User) error {
 // Update will set (normalize) the remember hash, then pass to the database layer to
 // update the user record in the database.
 func (uv *userValidator) Update(user *User) error {
-	if err := runUserValFns(user, uv.bcryptPassword, uv.hmacRemember, uv.normalizeEmail); err != nil {
+	err := runUserValFns(user,
+		uv.bcryptPassword,
+		uv.hmacRemember,
+		uv.normalizeEmail,
+		uv.requireEmail)
+	if err != nil {
 		return err
 	}
 	return uv.UserDB.Update(user)
@@ -385,6 +399,14 @@ func (uv *userValidator) idGreaterThan(n uint) userValFn {
 func (uv *userValidator) normalizeEmail(user *User) error {
 	user.Email = strings.ToLower(user.Email)
 	user.Email = strings.TrimSpace(user.Email)
+	return nil
+}
+
+// ensure email address is present
+func (uv *userValidator) requireEmail(user *User) error {
+	if user.Email == "" {
+		return ErrEmailRequired
+	}
 	return nil
 }
 
