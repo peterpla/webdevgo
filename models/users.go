@@ -87,6 +87,10 @@ var (
 	// ErrEmailInvalid is returned when an email address provided
 	// fails our regular expression test
 	ErrEmailInvalid = errors.New("models: email address is not valid")
+
+	// ErrEmailTaken is returned when an update or create is attempted
+	// specifying an email address that is already in use (found in the database)
+	ErrEmailTaken = errors.New("models: email address is already taken")
 )
 
 // userGorm represents our database interaction layer
@@ -315,7 +319,8 @@ func (uv *userValidator) Create(user *User) error {
 		uv.hmacRemember,
 		uv.normalizeEmail,
 		uv.requireEmail,
-		uv.emailFormat)
+		uv.emailFormat,
+		uv.emailIsAvail)
 	if err != nil {
 		return err
 	}
@@ -330,7 +335,8 @@ func (uv *userValidator) Update(user *User) error {
 		uv.hmacRemember,
 		uv.normalizeEmail,
 		uv.requireEmail,
-		uv.emailFormat)
+		uv.emailFormat,
+		uv.emailIsAvail)
 	if err != nil {
 		return err
 	}
@@ -431,6 +437,28 @@ func (uv *userValidator) emailFormat(user *User) error {
 		return ErrEmailInvalid
 	}
 	return nil
+}
+
+// ensure specified email is not already being used
+// (i.e., is not already present in the database)
+func (uv *userValidator) emailIsAvail(user *User) error {
+	existing, err := uv.ByEmail(user.Email)
+	if err == ErrNotFound {
+		// Email address is available: we didn't find a user with this email
+		return nil
+	}
+	if err != nil {
+		// some other error occurred, return it
+		return err
+	}
+
+	// if we get here, a user record in the database uses this email address
+	// is it the same user trying to update their existing email address?
+	if user.ID != existing.ID {
+		// a different user than the one we're updating, so email is taken
+		return ErrEmailTaken
+	}
+	return nil // user is updating their existing email address
 }
 
 /* ********** ********** ********** */
