@@ -76,6 +76,10 @@ var (
 	// to a method like Delete.
 	ErrIDInvalid = errors.New("models: ID provided was invalid")
 
+	// ErrPasswordRequired is returned when a password is empty (after
+	// whitespace trimmed) or password hash is empty
+	ErrPasswordRequired = errors.New("models: password is required")
+
 	// ErrPasswordTooShort is returned when a user specifies a password
 	// shorter than 8 characters
 	ErrPasswordTooShort = errors.New("models: password must be at least 8 characters long")
@@ -318,8 +322,10 @@ func (uv *userValidator) Create(user *User) error {
 		}
 	*/
 	err := runUserValFns(user,
-		uv.passwordMinLength, // must be run before bcryptPassword
-		uv.bcryptPassword,
+		uv.passwordRequired,     // 1 - sequence matters!
+		uv.passwordMinLength,    // 2 - sequence matters!
+		uv.bcryptPassword,       // 3 - sequence matters!
+		uv.passwordHashRequired, // 4 - sequence matters!
 		uv.setRememberIfUnset,
 		uv.hmacRemember,
 		uv.normalizeEmail,
@@ -336,8 +342,9 @@ func (uv *userValidator) Create(user *User) error {
 // update the user record in the database.
 func (uv *userValidator) Update(user *User) error {
 	err := runUserValFns(user,
-		uv.passwordMinLength, // must be run before bcryptPassword
-		uv.bcryptPassword,
+		uv.passwordMinLength,    // 1 - sequence matters!
+		uv.bcryptPassword,       // 2 - sequence matters!
+		uv.passwordHashRequired, // 3 - sequence matters!
 		uv.hmacRemember,
 		uv.normalizeEmail,
 		uv.requireEmail,
@@ -474,6 +481,22 @@ func (uv *userValidator) passwordMinLength(user *User) error {
 	}
 	if len(user.Password) < 8 {
 		return ErrPasswordTooShort
+	}
+	return nil
+}
+
+// ensure password is not empty
+func (uv *userValidator) passwordRequired(user *User) error {
+	if user.Password == "" {
+		return ErrPasswordRequired
+	}
+	return nil
+}
+
+// ensure password hash is not empty
+func (uv *userValidator) passwordHashRequired(user *User) error {
+	if user.PasswordHash == "" {
+		return ErrPasswordRequired
 	}
 	return nil
 }

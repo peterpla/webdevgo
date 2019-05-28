@@ -89,50 +89,34 @@ func TestCreateByEmailAndDelete(t *testing.T) {
 	}
 
 	/* ********** ********** ********** ********** ********** */
-	/*
-		// TEST 2: Create (no password), Authenticate, Delete, ByID
 
-		rand.Seed(time.Now().UnixNano())
-		rnd = rand.Intn(math.MaxUint16)
-		r = strconv.Itoa(rnd)
+	// TEST 2: Create (no password), Authenticate, Delete, ByID
 
-		// Create a test user
-		user = User{
-			Name:     "",
-			Email:    "",
-			Password: "",
-		}
+	rand.Seed(time.Now().UnixNano())
+	rnd = rand.Intn(math.MaxUint16)
+	r = strconv.Itoa(rnd)
 
-		user.Name = fmt.Sprintf("Test%s User", r)
-		user.Email = fmt.Sprintf("test%s@test.com", r)
-		// keep Password as empty string
+	// Create a test user
+	user = User{
+		Name:     "",
+		Email:    "",
+		Password: "",
+	}
 
-		fmt.Printf("User: %+v\n", user)
-		if err := us.Create(&user); err != nil {
-			t.Fatalf("us.Create(): expected nil, got = %v", err)
-		}
+	user.Name = fmt.Sprintf("Test%s User", r)
+	user.Email = fmt.Sprintf("test%s@test.com", r)
+	// keep Password as empty string
 
-		// var foundRecord *User
+	fmt.Printf("User: %+v\n", user)
+	if err := us.Create(&user); err != ErrPasswordRequired {
+		t.Fatalf("us.Create(): expected ErrPasswordRequired, got = %v", err)
+	}
 
-		// call ByEmail() to confirm that User was created
-		if foundRecord, err = us.ByEmail(user.Email); err != nil {
-			t.Fatalf("us.ByEmail(): expected \"%v\", got \"%v\"", ErrNotFound, err)
-		}
+	// var foundRecord *User
 
-		// due to blank password, Authenticate should return an error from bcrypt package
-		if _, err := us.Authenticate(user.Email, user.Password); err != bcrypt.ErrHashTooShort {
-			t.Logf("us.Authenticate(): expected ErrHashTooShort, got \"%v\"", err)
-		}
-
-		// delete that user
-		if err = us.Delete(foundRecord.Model.ID); err != nil {
-			t.Fatalf("us.Delete(): expected nil, got \"%v\"", err)
-		}
-
-		// confirm the created user was deleted by looking for their id
-		if foundRecord, err = us.ByID(user.ID); err != ErrNotFound {
-			t.Fatalf("us.ByID(): expected \"%v\", got \"%v\"", ErrNotFound, err)
-		}
-	*/
+	// due to blank password, Authenticate should return ErrNotFound
+	if _, err := us.Authenticate(user.Email, user.Password); err != ErrNotFound {
+		t.Logf("us.Authenticate(): expected ErrNotFound, got \"%v\"", err)
+	}
 
 }
