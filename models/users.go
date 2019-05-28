@@ -289,20 +289,13 @@ func (ug *userGorm) AutoMigrate() error {
 // value with an empty string, set the remember token and hash; then pass to the
 // database layer to create the user record in the database
 func (uv *userValidator) Create(user *User) error {
-	if user.Password == "" {
-		panic(ErrInvalidPassword)
-	}
-	if user.Remember == "" { // created/populated at login, so expected to be empty
-		token, err := rand.RememberToken()
-		if err != nil {
-			return err
+	/*
+		if user.Password == "" {
+			panic(ErrInvalidPassword)
 		}
-		user.Remember = token
-	} else {
-		fmt.Printf("user.Remember unexpectedly not empty: \"%s\"\n", user.Remember)
-	}
-
-	if err := runUserValFns(user, uv.bcryptPassword, uv.hmacRemember); err != nil {
+	*/
+	err := runUserValFns(user, uv.bcryptPassword, uv.setRememberIfUnset, uv.hmacRemember)
+	if err != nil {
 		return err
 	}
 	return uv.UserDB.Create(user)
@@ -338,12 +331,25 @@ func (uv *userValidator) ByRemember(token string) (*User, error) {
 	return uv.UserDB.ByRemember(user.RememberHash)
 }
 
-// hmacRemember calculates and stores the remember token hash
+// hmacRemember calculates and stores in User the remember token hash
 func (uv *userValidator) hmacRemember(user *User) error {
 	if user.Remember == "" {
 		return nil
 	}
 	user.RememberHash = uv.hmac.Hash(user.Remember)
+	return nil
+}
+
+// setRememberIfUnset ensures User has a remember token
+func (uv *userValidator) setRememberIfUnset(user *User) error {
+	if user.Remember != "" {
+		return nil
+	}
+	token, err := rand.RememberToken()
+	if err != nil {
+		return err
+	}
+	user.Remember = token
 	return nil
 }
 
