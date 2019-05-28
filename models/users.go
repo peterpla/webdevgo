@@ -72,13 +72,13 @@ var (
 	// in the database.
 	ErrNotFound = errors.New("models: resource not found")
 
-	// ErrInvalidID is returned when an invalid ID is provided
+	// ErrIDInvalid is returned when an invalid ID is provided
 	// to a method like Delete.
-	ErrInvalidID = errors.New("models: ID provided was invalid")
+	ErrIDInvalid = errors.New("models: ID provided was invalid")
 
-	// ErrInvalidPassword is returned when an invalid password
+	// ErrPasswordIncorrect is returned when an invalid password
 	// is dtected when attempting to authenticate a user.
-	ErrInvalidPassword = errors.New("models: incorrect password provided")
+	ErrPasswordIncorrect = errors.New("models: incorrect password provided")
 
 	// ErrEmailRequires is returned when an email address is not
 	// provided when creating a user
@@ -108,7 +108,7 @@ type UserService interface {
 	// Authenticate verifies the provided email address and
 	// password are correct.
 	// If correct, return the corresponding user and nil.
-	// Otherwise, return ErrNotFound, ErrInvalidPassword, or
+	// Otherwise, return ErrNotFound, ErrPasswordIncorrect, or
 	// pass along an error received from deeper in the stack.
 	Authenticate(email string, password string) (*User, error)
 	UserDB
@@ -172,7 +172,7 @@ func newUserValidator(udb UserDB, hmac hash.HMAC) *userValidator {
 // If the email address provided is invalid, return
 //   nil, ErrNotFound
 // If the password provided is invalid, return
-//   nil, ErrInvalidPassword
+//   nil, ErrPasswordIncorrect
 // If both the email and password are valid (success), return
 //   user, nil
 // If there is another error, return
@@ -192,7 +192,7 @@ func (us *userService) Authenticate(email string, password string) (*User, error
 	case nil:
 		return foundUser, nil // SUCCESS, return user populated with fields from DB
 	case bcrypt.ErrMismatchedHashAndPassword:
-		return nil, ErrInvalidPassword // password did not produce matching hash
+		return nil, ErrPasswordIncorrect // password did not produce matching hash
 	default:
 		return nil, err // some other error
 	}
@@ -310,7 +310,7 @@ func (ug *userGorm) AutoMigrate() error {
 func (uv *userValidator) Create(user *User) error {
 	/*
 		if user.Password == "" {
-			panic(ErrInvalidPassword)
+			panic(ErrPasswordIncorrect)
 		}
 	*/
 	err := runUserValFns(user,
@@ -407,7 +407,7 @@ func (uv *userValidator) setRememberIfUnset(user *User) error {
 func (uv *userValidator) idGreaterThan(n uint) userValFn {
 	return userValFn(func(user *User) error {
 		if user.ID <= n {
-			return ErrInvalidID
+			return ErrIDInvalid
 		}
 		return nil
 	})
