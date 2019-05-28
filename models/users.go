@@ -313,8 +313,12 @@ func (uv *userValidator) Update(user *User) error {
 // Delete will validate the provided user ID, then pass to the database layer to
 // delete the user record from the database.
 func (uv *userValidator) Delete(id uint) error {
-	if id == 0 { // uint so cannot be <0
-		return ErrInvalidID
+	var user User
+	user.ID = id
+
+	err := runUserValFns(&user, uv.idGreaterThan(0))
+	if err != nil {
+		return err
 	}
 	return uv.UserDB.Delete(id)
 }
@@ -351,6 +355,16 @@ func (uv *userValidator) setRememberIfUnset(user *User) error {
 	}
 	user.Remember = token
 	return nil
+}
+
+// idGreaterThan ensures the ID is greater than the provided argument
+func (uv *userValidator) idGreaterThan(n uint) userValFn {
+	return userValFn(func(user *User) error {
+		if user.ID <= n {
+			return ErrInvalidID
+		}
+		return nil
+	})
 }
 
 /* ********** ********** ********** */
