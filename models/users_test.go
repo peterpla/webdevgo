@@ -21,7 +21,7 @@ var connStr string
 
 func TestMain(m *testing.M) {
 	connStr = fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable", dbHost, dbPort, dbUser, dbName)
-	fmt.Printf("TestMain: %s\n", connStr)
+	// fmt.Printf("TestMain: %s\n", connStr)
 	os.Exit(m.Run())
 }
 

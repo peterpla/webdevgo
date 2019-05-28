@@ -2,7 +2,7 @@ package models
 
 import (
 	"errors"
-	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/jinzhu/gorm"
@@ -28,7 +28,8 @@ type User struct {
 // interface chain
 type userValidator struct {
 	UserDB
-	hmac hash.HMAC
+	hmac       hash.HMAC
+	emailRegex *regexp.Regexp
 }
 
 // a compile-time error below indicates the UserDB type no longer matches
@@ -82,6 +83,10 @@ var (
 	// ErrEmailRequires is returned when an email address is not
 	// provided when creating a user
 	ErrEmailRequired = errors.New("models: email address is required")
+
+	// ErrEmailInvalid is returned when an email address provided
+	// fails our regular expression test
+	ErrEmailInvalid = errors.New("models: email address is not valid")
 )
 
 // userGorm represents our database interaction layer
@@ -139,15 +144,20 @@ func NewUserService(connectionInfo string) (UserService, error) {
 	}
 
 	hmac := hash.NewHMAC(hmacSecretKey)
-	uv := &userValidator{
-		hmac:   hmac,
-		UserDB: ug,
-	}
-	// MAGIC: somehow returning the address of a userService is equivalent to
-	// returning a UserService interface ???
+	uv := newUserValidator(ug, hmac)
+
 	return &userService{
 		UserDB: uv,
 	}, nil
+}
+
+// NewUserValidator returns a pointer to a userValidator instance
+func newUserValidator(udb UserDB, hmac hash.HMAC) *userValidator {
+	return &userValidator{
+		UserDB:     udb,
+		hmac:       hmac,
+		emailRegex: regexp.MustCompile(`[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,16}$`),
+	}
 }
 
 /* ********** ********** ********** */
@@ -191,7 +201,7 @@ func (us *userService) Authenticate(email string, password string) (*User, error
 // normalized, and will create the user database record, populating
 // the gorm.Model data including the ID, CreatedAt, and UpdatedAt fields.
 func (ug *userGorm) Create(user *User) error {
-	fmt.Printf("enter Create, user=%+v\n", user)
+	// fmt.Printf("enter Create, user=%+v\n", user)
 	return ug.db.Create(user).Error
 }
 
@@ -205,14 +215,14 @@ func (ug *userGorm) Create(user *User) error {
 // As a general rule, any error but ErrNotFound should
 // probably result in a 500 error.
 func (ug *userGorm) ByID(id uint) (*User, error) {
-	fmt.Printf("enter ByID, id=%d\n", id)
+	// fmt.Printf("enter ByID, id=%d\n", id)
 	var user User
 	db := ug.db.Where("id = ?", id)
 	err := first(db, &user)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("exit ByID, user:%+v\n", user)
+	// fmt.Printf("exit ByID, user:%+v\n", user)
 	return &user, nil
 }
 
@@ -224,11 +234,11 @@ func (ug *userGorm) ByID(id uint) (*User, error) {
 // more information about what went wrong. This may not be
 // an error genereated by the models package.
 func (ug *userGorm) ByEmail(email string) (*User, error) {
-	fmt.Printf("enter ByEmail, email=%s\n", email)
+	// fmt.Printf("enter ByEmail, email=%s\n", email)
 	var user User
 	db := ug.db.Where("email = ?", email)
 	err := first(db, &user)
-	fmt.Printf("exit ByEmail, user:%+v\n", user)
+	// fmt.Printf("exit ByEmail, user:%+v\n", user)
 	return &user, err
 }
 
@@ -236,13 +246,13 @@ func (ug *userGorm) ByEmail(email string) (*User, error) {
 // that user.
 // Errors are the same as ByEmail above
 func (ug *userGorm) ByRemember(rememberHash string) (*User, error) {
-	fmt.Printf("enter ByRemember, rememberHash=%s\n", rememberHash)
+	// fmt.Printf("enter ByRemember, rememberHash=%s\n", rememberHash)
 	var user User
 	err := first(ug.db.Where("remember_hash = ?", rememberHash), &user)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("exit ByRemember, user:%+v\n", user)
+	// fmt.Printf("exit ByRemember, user:%+v\n", user)
 	return &user, nil
 }
 
@@ -250,16 +260,16 @@ func (ug *userGorm) ByRemember(rememberHash string) (*User, error) {
 // validated and normalized, and will update the user's DB record with the
 // provided User object
 func (ug *userGorm) Update(user *User) error {
-	fmt.Printf("enter Update, user=%+v\n", user)
+	// fmt.Printf("enter Update, user=%+v\n", user)
 	return ug.db.Save(user).Error
 }
 
 // Delete expects the user ID to be validated and normalized, and will
 // delete the user with the provided ID
 func (ug *userGorm) Delete(id uint) error {
-	fmt.Printf("enter Delete, id=%d\n", id)
+	// fmt.Printf("enter Delete, id=%d\n", id)
 	user := User{Model: gorm.Model{ID: id}}
-	fmt.Printf("calling ug.db.Delete passing user=%+v\n", user)
+	// fmt.Printf("calling ug.db.Delete passing user=%+v\n", user)
 	return ug.db.Delete(&user).Error
 }
 
@@ -304,7 +314,8 @@ func (uv *userValidator) Create(user *User) error {
 		uv.setRememberIfUnset,
 		uv.hmacRemember,
 		uv.normalizeEmail,
-		uv.requireEmail)
+		uv.requireEmail,
+		uv.emailFormat)
 	if err != nil {
 		return err
 	}
@@ -318,7 +329,8 @@ func (uv *userValidator) Update(user *User) error {
 		uv.bcryptPassword,
 		uv.hmacRemember,
 		uv.normalizeEmail,
-		uv.requireEmail)
+		uv.requireEmail,
+		uv.emailFormat)
 	if err != nil {
 		return err
 	}
@@ -406,6 +418,17 @@ func (uv *userValidator) normalizeEmail(user *User) error {
 func (uv *userValidator) requireEmail(user *User) error {
 	if user.Email == "" {
 		return ErrEmailRequired
+	}
+	return nil
+}
+
+// ensure email address matches our regular expression test
+func (uv *userValidator) emailFormat(user *User) error {
+	if user.Email == "" {
+		return nil
+	}
+	if !uv.emailRegex.MatchString(user.Email) {
+		return ErrEmailInvalid
 	}
 	return nil
 }
