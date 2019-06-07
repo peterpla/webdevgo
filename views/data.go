@@ -9,15 +9,18 @@ type Data struct {
 
 // Alert is used to render Bootstrap Alert messages in templates
 type Alert struct {
-	Level string
+	Level   string
 	Message string
 }
 
 // Constants for use with alerts
 const (
-	AlertLvlError = "danger"
+	AlertLvlError   = "danger"
 	AlertLvlWarning = "warning"
-	AlertLvlInfo = "info"
+	AlertLvlInfo    = "info"
 	AlertLvlSuccess = "success"
-)
 
+	// AlertMsgGeneric is displayed when any random error
+	// is encountered by our backend
+	AlertMsgGeneric = "Something went wrong. Please try again, and contact us if the problem persists."
+)

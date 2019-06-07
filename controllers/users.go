@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/peterpla/webdevgo/models"
@@ -30,16 +31,7 @@ func NewUsers(us models.UserService) *Users {
 //
 // GET /signup
 func (u *Users) New(w http.ResponseWriter, r *http.Request) {
-	alert := views.Alert{
-		Level:   "success",
-		Message: "Successfully rendered a dynamic alert!",
-	}
-	data := views.Data{
-		Alert: &alert,
-		Yield: "this can be any data b/c its type is interface",
-	}
-
-	if err := u.NewView.Render(w, data); err != nil {
+	if err := u.NewView.Render(w, nil); err != nil {
 		panic(err)
 	}
 }
@@ -56,9 +48,17 @@ type SignupForm struct {
 //
 // POST /signup
 func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
+	var vd views.Data
 	var form SignupForm
+
 	if err := parseForm(r, &form); err != nil {
-		panic(err)
+		log.Println(err)
+		vd.Alert = &views.Alert{
+			Level:   views.AlertLvlError,
+			Message: views.AlertMsgGeneric,
+		}
+		u.NewView.Render(w, vd)
+		return
 	}
 	user := models.User{
 		Name:     form.Name,
@@ -67,21 +67,28 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := u.us.Create(&user); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		vd.Alert = &views.Alert{
+			Level:   views.AlertLvlError,
+			Message: err.Error(),
+		}
+		u.NewView.Render(w, vd)
 		return
 	}
 
-	/*
-		fmt.Fprintf(w, "User is: %+v\n", user) // echo to web page
-		fmt.Printf("User is: %+v\n", user)     // echo to stdout
-	*/
+	// fmt.Fprintf(w, "User is: %+v\n", user) // echo to web page
+	// fmt.Printf("User is: %+v\n", user)     // echo to stdout
 
 	// sign in the newly-created user
 	// remember token is NOT provided
 	err := u.signIn(w, &user)
 	if err != nil {
-		// TODO: replace the temporary debugging message below
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		// user resource was created, but we could not signin; likely
+		// a transient problem, so redirect the user to login. Not optimal, but
+		// we think this won't happen often.
+		//
+		// Log it so we can see if that's a valid assumption :)
+		log.Println("RARE: after user creation, signin failed")
+		http.Redirect(w, r, "/login", http.StatusFound)
 		return
 	}
 
