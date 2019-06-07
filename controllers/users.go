@@ -30,11 +30,11 @@ func NewUsers(us models.UserService) *Users {
 //
 // GET /signup
 func (u *Users) New(w http.ResponseWriter, r *http.Request) {
-	alert := Alert{
+	alert := views.Alert{
 		Level:   "success",
 		Message: "Successfully rendered a dynamic alert!",
 	}
-	data := Data{
+	data := views.Data{
 		Alert: &alert,
 		Yield: "this can be any data b/c its type is interface",
 	}
