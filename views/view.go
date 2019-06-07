@@ -6,12 +6,14 @@ import (
 	"path/filepath"
 )
 
-// path-related values used to access layout and template files
-var (
-	LayoutDir   = "views/layouts/"
-	TemplateDir = "views/"
-	TemplateExt = ".gohtml"
-)
+// LayoutDir sets the path to layout files
+var LayoutDir = "views/layouts/"
+
+// TemplateDir sets the path to template files
+var TemplateDir = "views/"
+
+// TemplateExt sets the file extension for template files
+var TemplateExt = ".gohtml"
 
 // View struct used by most view methods
 type View struct {

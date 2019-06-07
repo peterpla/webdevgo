@@ -319,6 +319,21 @@ func (ug *userGorm) AutoMigrate() error {
 }
 
 /* ********** ********** ********** */
+/*         modelError methods       */
+
+type modelError string
+
+// Error implements the expected Error() method
+func (e modelError) Error() string {
+	return string(e)
+}
+
+// Public returns the white-listed error string
+func (e modelError) Public() string {
+	return string(e)
+}
+
+/* ********** ********** ********** */
 /*       userValidator methods      */
 
 // Create will validate arguments, create the password hash, overwrite the password

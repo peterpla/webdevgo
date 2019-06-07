@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 )
 
+// RememberTokenBytes defines the Remember token length in bytes
 const RememberTokenBytes = 32
 
 // RememberToken returns a fixed-length remember token
