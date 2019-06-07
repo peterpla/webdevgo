@@ -6,19 +6,33 @@ import (
 	"path/filepath"
 )
 
+// path-related values used to access layout and template files
 var (
-	LayoutDir   string = "views/layouts/"
-	TemplateDir string = "views/"
-	TemplateExt string = ".gohtml"
+	LayoutDir   = "views/layouts/"
+	TemplateDir = "views/"
+	TemplateExt = ".gohtml"
 )
 
+// View struct used by most view methods
 type View struct {
 	Template *template.Template
 	Layout   string
 }
 
+// Render method used to render templates into web pages
 func (v *View) Render(w http.ResponseWriter, data interface{}) error {
 	w.Header().Set("Content-Type", "text/html")
+
+	switch data.(type) {
+	case Data:
+		// do nothing, View processing expects Data struct
+	default:
+		// pass the data argument in a Data struct
+		data = Data{
+			Yield: data,
+		}
+	}
+
 	return v.Template.ExecuteTemplate(w, v.Layout, data)
 }
 
@@ -36,6 +50,7 @@ func layoutFiles() []string {
 	return files
 }
 
+// NewView creates a new View based on the layout and template files arguments
 func NewView(layout string, files ...string) *View {
 	addTemplatePath(files)
 	addTemplateExt(files)

@@ -30,14 +30,6 @@ func NewUsers(us models.UserService) *Users {
 //
 // GET /signup
 func (u *Users) New(w http.ResponseWriter, r *http.Request) {
-	type Alert struct {
-		Level   string
-		Message string
-	}
-	type Data struct {
-		Alert *Alert
-		Yield interface{}
-	}
 	alert := Alert{
 		Level:   "success",
 		Message: "Successfully rendered a dynamic alert!",
