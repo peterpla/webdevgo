@@ -1,12 +1,13 @@
+// Package main ... [TODO: add documentation]
 package main
 
 import (
 	"fmt"
 	"net/http"
 
-	"./controllers"
-	"./models"
-	"./views"
+	"github.com/peterpla/webdevgo/controllers"
+	"github.com/peterpla/webdevgo/models"
+	"github.com/peterpla/webdevgo/views"
 
 	"github.com/gorilla/mux"
 )
@@ -23,6 +24,7 @@ var homeView *views.View
 var contactView *views.View
 var faqView *views.View
 
+// NotFound produces 404 Not Found responses for not-found URLs
 func NotFound(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	w.WriteHeader(http.StatusNotFound)
@@ -48,6 +50,7 @@ func main() {
 		panic(err)
 	}
 	defer us.Close()
+	// us.DestructiveReset()
 
 	us.AutoMigrate()
 

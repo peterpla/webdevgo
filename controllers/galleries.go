@@ -3,20 +3,22 @@ package controllers
 import (
 	"net/http"
 
-	"../views"
+	"github.com/peterpla/webdevgo/views"
 )
 
+// Galleries ... [add documentation]
 type Galleries struct {
 	Gallery *views.View
 }
 
+// NewGalleries ... [add documentation]
 func NewGalleries() *Galleries {
 	return &Galleries{
 		Gallery: views.NewView("bootstrap", "galleries/gallery"),
 	}
 }
 
-// New is used to render the form where a user can
+// Create is used to render the form where a user can
 // create a new gallery
 //
 // POST /signup

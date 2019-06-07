@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"./controllers"
-	"./models"
+	"github.com/peterpla/webdevgo/controllers"
+	"github.com/peterpla/webdevgo/models"
 )
 
 func TestViewHandlers(t *testing.T) {

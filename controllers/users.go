@@ -4,17 +4,19 @@ import (
 	"fmt"
 	"net/http"
 
-	"../models"
-	"../rand"
-	"../views"
+	"github.com/peterpla/webdevgo/models"
+	"github.com/peterpla/webdevgo/rand"
+	"github.com/peterpla/webdevgo/views"
 )
 
+// Users ... [add documentation]
 type Users struct {
 	NewView   *views.View
 	LoginView *views.View
 	us        models.UserService
 }
 
+// NewUsers ... [add documentation]
 func NewUsers(us models.UserService) *Users {
 	return &Users{
 		NewView:   views.NewView("bootstrap", "users/new"),
@@ -33,6 +35,7 @@ func (u *Users) New(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// SignupForm ... [add documentation]
 type SignupForm struct {
 	Name     string `schema:"name"`
 	Email    string `schema:"email"`
@@ -78,6 +81,7 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/cookietest", http.StatusFound)
 }
 
+// LoginForm ... [add documentation]
 type LoginForm struct {
 	Email    string `schema:"email"`
 	Password string `schema:"password"`

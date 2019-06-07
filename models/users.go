@@ -6,13 +6,14 @@ import (
 	"strings"
 
 	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
+	_ "github.com/jinzhu/gorm/dialects/postgres" // load gorm's postgres driver
 	"golang.org/x/crypto/bcrypt"
 
-	"../hash"
-	"../rand"
+	"github.com/peterpla/webdevgo/hash"
+	"github.com/peterpla/webdevgo/rand"
 )
 
+// User ... [TODO: add documentation]
 type User struct {
 	gorm.Model
 	Name         string
@@ -88,7 +89,7 @@ var (
 	// is dtected when attempting to authenticate a user.
 	ErrPasswordIncorrect = errors.New("models: incorrect password provided")
 
-	// ErrEmailRequires is returned when an email address is not
+	// ErrEmailRequired is returned when an email address is not
 	// provided when creating a user
 	ErrEmailRequired = errors.New("models: email address is required")
 
@@ -99,6 +100,14 @@ var (
 	// ErrEmailTaken is returned when an update or create is attempted
 	// specifying an email address that is already in use (found in the database)
 	ErrEmailTaken = errors.New("models: email address is already taken")
+
+	// ErrRememberRequired is returned when a create or update
+	// is attempted without a user Remember token hash
+	ErrRememberRequired = errors.New("models: remember token is required")
+
+	// ErrRememberTooShort is returned when a Remember token
+	// is not at least 32 bytes
+	ErrRememberTooShort = errors.New("models: remember token must be at least 32 bytes")
 )
 
 // userGorm represents our database interaction layer
@@ -163,7 +172,7 @@ func NewUserService(connectionInfo string) (UserService, error) {
 	}, nil
 }
 
-// NewUserValidator returns a pointer to a userValidator instance
+// newUserValidator returns a pointer to a userValidator instance
 func newUserValidator(udb UserDB, hmac hash.HMAC) *userValidator {
 	return &userValidator{
 		UserDB:     udb,
@@ -327,7 +336,9 @@ func (uv *userValidator) Create(user *User) error {
 		uv.bcryptPassword,       // 3 - sequence matters!
 		uv.passwordHashRequired, // 4 - sequence matters!
 		uv.setRememberIfUnset,
+		uv.rememberMinBytes, // after setRemember - sequence matters!
 		uv.hmacRemember,
+		uv.rememberHashRequired, // after hmacRemember - sequence matters!
 		uv.normalizeEmail,
 		uv.requireEmail,
 		uv.emailFormat,
@@ -345,7 +356,9 @@ func (uv *userValidator) Update(user *User) error {
 		uv.passwordMinLength,    // 1 - sequence matters!
 		uv.bcryptPassword,       // 2 - sequence matters!
 		uv.passwordHashRequired, // 3 - sequence matters!
+		uv.rememberMinBytes,
 		uv.hmacRemember,
+		uv.rememberHashRequired, // after hmacRemember - sequence matters!
 		uv.normalizeEmail,
 		uv.requireEmail,
 		uv.emailFormat,
@@ -497,6 +510,33 @@ func (uv *userValidator) passwordRequired(user *User) error {
 func (uv *userValidator) passwordHashRequired(user *User) error {
 	if user.PasswordHash == "" {
 		return ErrPasswordRequired
+	}
+	return nil
+}
+
+// ensure Remember hash is >= 32 bytes
+func (uv *userValidator) rememberMinBytes(user *User) error {
+	if user.Remember == "" {
+		// Remember tokens arent' always updated, so see if one is provided.
+		// If not, trust other validations will catch any errors.
+		return nil
+	}
+	n, err := rand.NBytes(user.Remember)
+	if err != nil {
+		return err
+	}
+
+	if n < 32 { // CAUTION: hard-coded constant, unlikely to change
+		return ErrRememberTooShort
+	}
+
+	return nil
+}
+
+// ensure Remember hash is provided
+func (uv *userValidator) rememberHashRequired(user *User) error {
+	if user.RememberHash == "" {
+		return ErrRememberRequired
 	}
 	return nil
 }

@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"../models"
+	"github.com/peterpla/webdevgo/models"
 )
 
 const (
