@@ -1,7 +1,6 @@
 package models
 
 import (
-	"errors"
 	"regexp"
 	"strings"
 
@@ -67,47 +66,52 @@ type UserDB interface {
 	DestructiveReset() error
 }
 
+// The Public method on the modelError type effectively "white lists" these errors
+// for display to end users, after some massaging. Otherwise the error message text
+// would be repleaced with AlertMsgGeneric.
+type modelError string
+
 var (
 	// ErrNotFound is returned when the query executes successfully
 	// but returned zero rows. I.e., the resource cannot be found
 	// in the database.
-	ErrNotFound = errors.New("models: resource not found")
+	ErrNotFound modelError = "models: resource not found"
 
 	// ErrIDInvalid is returned when an invalid ID is provided
 	// to a method like Delete.
-	ErrIDInvalid = errors.New("models: ID provided was invalid")
+	ErrIDInvalid modelError = "models: ID provided was invalid"
 
 	// ErrPasswordRequired is returned when a password is empty (after
 	// whitespace trimmed) or password hash is empty
-	ErrPasswordRequired = errors.New("models: password is required")
+	ErrPasswordRequired modelError = "models: password is required"
 
 	// ErrPasswordTooShort is returned when a user specifies a password
 	// shorter than 8 characters
-	ErrPasswordTooShort = errors.New("models: password must be at least 8 characters long")
+	ErrPasswordTooShort modelError = "models: password must be at least 8 characters long"
 
 	// ErrPasswordIncorrect is returned when an invalid password
 	// is dtected when attempting to authenticate a user.
-	ErrPasswordIncorrect = errors.New("models: incorrect password provided")
+	ErrPasswordIncorrect modelError = "models: incorrect password provided"
 
 	// ErrEmailRequired is returned when an email address is not
 	// provided when creating a user
-	ErrEmailRequired = errors.New("models: email address is required")
+	ErrEmailRequired modelError = "models: email address is required"
 
 	// ErrEmailInvalid is returned when an email address provided
 	// fails our regular expression test
-	ErrEmailInvalid = errors.New("models: email address is not valid")
+	ErrEmailInvalid modelError = "models: email address is not valid"
 
 	// ErrEmailTaken is returned when an update or create is attempted
 	// specifying an email address that is already in use (found in the database)
-	ErrEmailTaken = errors.New("models: email address is already taken")
+	ErrEmailTaken modelError = "models: email address is already taken"
 
 	// ErrRememberRequired is returned when a create or update
 	// is attempted without a user Remember token hash
-	ErrRememberRequired = errors.New("models: remember token is required")
+	ErrRememberRequired modelError = "models: remember token is required"
 
 	// ErrRememberTooShort is returned when a Remember token
 	// is not at least 32 bytes
-	ErrRememberTooShort = errors.New("models: remember token must be at least 32 bytes")
+	ErrRememberTooShort modelError = "models: remember token must be at least 32 bytes"
 )
 
 // userGorm represents our database interaction layer
@@ -321,8 +325,6 @@ func (ug *userGorm) AutoMigrate() error {
 /* ********** ********** ********** */
 /*         modelError methods       */
 
-type modelError string
-
 // Error implements the expected Error() method
 func (e modelError) Error() string {
 	return string(e)
@@ -330,7 +332,11 @@ func (e modelError) Error() string {
 
 // Public returns the white-listed error string
 func (e modelError) Public() string {
-	return string(e)
+	// strip off initial "models: ", capitalize the first word of the Error string
+	s := strings.Replace(string(e), "models: ", "", 1)
+	split := strings.Split(s, " ")
+	split[0] = strings.Title(split[0])
+	return strings.Join(split, " ")
 }
 
 /* ********** ********** ********** */

@@ -15,8 +15,9 @@ type Alert struct {
 	Message string
 }
 
-// PublicError lets us map to public-facing error strings from
-// err.Error() strings; i.e., white-list error messages
+// PublicError establishes public-facing error strings, effectively
+// white-listing error messages on types that support the
+// PublicError interface
 type PublicError interface {
 	error
 	Public() string
@@ -34,16 +35,16 @@ const (
 	AlertMsgGeneric = "Something went wrong. Please try again, and contact us if the problem persists."
 )
 
-// SetAlert sanitizes error messages with white-listed strings
+// SetAlert sanitizes error messages with white-listed strings, and log the message
 func (d *Data) SetAlert(err error) {
 	var msg string
 
 	if pErr, ok := err.(PublicError); ok {
 		msg = pErr.Public()
 	} else {
-		log.Println(err)
 		msg = AlertMsgGeneric
 	}
+	log.Println(err)
 
 	d.Alert = &Alert{
 		Level:   AlertLvlError,
