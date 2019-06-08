@@ -15,15 +15,17 @@ const (
 )
 
 func main() {
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
+	// setup database connection, initialize services
+		psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
 		"dbname=%s sslmode=disable",
 		dbHost, dbPort, dbUser, dbName)
-	us, err := models.NewUserService(psqlInfo)
+	services, err := models.NewServices(psqlInfo)
 	if err != nil {
 		panic(err)
 	}
-	defer us.Close()
-	us.DestructiveReset()
+	defer services.User.Close()
+	// services.User.AutoMigrate()
+	services.User.DestructiveReset()
 
 	user := models.User{
 		Name:     "Michael Scott",
@@ -31,7 +33,7 @@ func main() {
 		Password: "bestboss",
 	}
 
-	err = us.Create(&user)
+	err = services.User.Create(&user)
 	if err != nil {
 		panic(err)
 	}
@@ -44,7 +46,7 @@ func main() {
 	}
 
 	// Verify we can lookup a user with that remember token
-	user2, err := us.ByRemember(user.Remember)
+	user2, err := services.User.ByRemember(user.Remember)
 	if err != nil {
 		panic(err)
 	}

@@ -32,36 +32,35 @@ func NotFound(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	// initialize views
-	homeView = views.NewView("bootstrap", "static/home")
-	contactView = views.NewView("bootstrap", "static/contact")
-	faqView = views.NewView("bootstrap", "static/faq")
-
-	// initialize controllers
-	staticC := controllers.NewStatic()
-	galleriesC := controllers.NewGalleries()
-
-	// the Users controller requires a UserService, make that happen
+	// setup database connection, initialize services
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
 		"dbname=%s sslmode=disable",
 		dbHost, dbPort, dbUser, dbName)
-	us, err := models.NewUserService(psqlInfo)
+	services, err := models.NewServices(psqlInfo)
 	if err != nil {
 		panic(err)
 	}
-	defer us.Close()
-	// us.DestructiveReset()
+	// TODO: simplify this
+	defer services.User.Close()
+	// services.User.DestructiveReset()
+	services.User.AutoMigrate()
 
-	us.AutoMigrate()
+	// initialize controllers
+	staticC := controllers.NewStatic()
+	usersC := controllers.NewUsers(services.User)
+	// galleriesC := controllers.NewGalleries()
 
-	usersC := controllers.NewUsers(us)
+	// initialize views
+	// homeView = views.NewView("bootstrap", "static/home")
+	// contactView = views.NewView("bootstrap", "static/contact")
+	// faqView = views.NewView("bootstrap", "static/faq")
 
 	// define routing
 	r := mux.NewRouter()
 	r.Handle("/", staticC.Home).Methods("GET")
 	r.Handle("/contact", staticC.Contact).Methods("GET")
 	r.Handle("/faq", staticC.Faq).Methods("GET")
-	r.Handle("/gallery", galleriesC.Gallery).Methods("GET")
+	// r.Handle("/gallery", galleriesC.Gallery).Methods("GET")
 
 	r.HandleFunc("/signup", usersC.New).Methods("GET")
 	r.HandleFunc("/signup", usersC.Create).Methods("POST")

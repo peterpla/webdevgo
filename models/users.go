@@ -1,6 +1,7 @@
 package models
 
 import (
+	"log"
 	"regexp"
 	"strings"
 
@@ -142,38 +143,19 @@ type userService struct {
 const hmacSecretKey = "secret-hmac-key"
 const userPwPepper = "secret-random-string"
 
-// newUserGorm returns a pointer to a new userGorm instance,
-// effectively a connection to the user database.
-// Only newUserGorm knows or cares which SQL-style database we're using.
-func newUserGorm(connectionInfo string) (*userGorm, error) {
-	db, err := gorm.Open("postgres", connectionInfo)
-	if err != nil {
-		return nil, err
-	}
-	db.LogMode(true)
-	return &userGorm{
-		db: db,
-	}, nil
-}
-
 // NewUserService returns a UserService INTERFACE that other
 // packages will use to access the user database.
-//
-// To change to a NoSQL database, replace the newUserGorm call with
-// a comparable call to open a different database.
-func NewUserService(connectionInfo string) (UserService, error) {
-	// log.Printf("enter NewUserService, connectionInfo: %s", connectionInfo)
-	ug, err := newUserGorm(connectionInfo)
-	if err != nil {
-		return nil, err
-	}
+func NewUserService(db *gorm.DB) UserService {
+	ug := &userGorm{db}
+	log.Printf("enter NewUserService, ug: %+v", ug)
 
 	hmac := hash.NewHMAC(hmacSecretKey)
 	uv := newUserValidator(ug, hmac)
 
-	return &userService{
+	u := &userService{
 		UserDB: uv,
-	}, nil
+	}
+	return u
 }
 
 // newUserValidator returns a pointer to a userValidator instance
