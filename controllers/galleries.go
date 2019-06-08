@@ -23,7 +23,5 @@ func NewGalleries() *Galleries {
 //
 // POST /signup
 func (g *Galleries) Create(w http.ResponseWriter, r *http.Request) {
-	if err := g.Gallery.Render(w, nil); err != nil {
-		panic(err)
-	}
+	g.Gallery.Render(w, nil)
 }

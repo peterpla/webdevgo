@@ -1,7 +1,9 @@
 package views
 
 import (
+	"bytes"
 	"html/template"
+	"io"
 	"net/http"
 	"path/filepath"
 )
@@ -22,26 +24,33 @@ type View struct {
 }
 
 // Render method used to render templates into web pages
-func (v *View) Render(w http.ResponseWriter, data interface{}) error {
+func (v *View) Render(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "text/html")
 
 	switch data.(type) {
 	case Data:
-		// do nothing, View processing expects Data struct
+		// Data struct - do nothing, View processing this
 	default:
-		// pass the data argument in a Data struct
+		// not a Data struct - pass the data argument in a Data struct
 		data = Data{
 			Yield: data,
 		}
 	}
 
-	return v.Template.ExecuteTemplate(w, v.Layout, data)
+	var buf bytes.Buffer
+	err := v.Template.ExecuteTemplate(&buf, v.Layout, data)
+	if err != nil {
+		http.Error(w, "Something went wrong. If the problem persists, please email support@exercise.com",
+			http.StatusInternalServerError)
+		return
+	}
+
+	// template executed without error, copy the buffer to w, and done
+	io.Copy(w, &buf)
 }
 
 func (v *View) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if err := v.Render(w, nil); err != nil {
-		panic(err)
-	}
+	v.Render(w, nil)
 }
 
 func layoutFiles() []string {
