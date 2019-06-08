@@ -101,9 +101,13 @@ type LoginForm struct {
 //
 // POST /login
 func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
-	form := LoginForm{}
+	var vd views.Data
+	var form LoginForm
+
 	if err := parseForm(r, &form); err != nil {
-		panic(err)
+		vd.SetAlert(err)
+		u.LoginView.Render(w, vd)
+		return
 	}
 
 	user, err := u.us.Authenticate(form.Email, form.Password)
@@ -111,12 +115,11 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch err {
 		case models.ErrNotFound:
-			fmt.Fprintln(w, "Incorrect email address.")
-		case models.ErrPasswordIncorrect:
-			fmt.Fprintln(w, "Incorrect password.")
+			vd.AlertError("No user exists with that email address")
 		default:
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			vd.SetAlert(err)
 		}
+		u.LoginView.Render(w, vd)
 		return
 	}
 
@@ -124,7 +127,8 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 	// Remember token is NOT populated in User object
 	err = u.signIn(w, user)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		vd.SetAlert(err)
+		u.LoginView.Render(w, vd)
 		return
 	}
 
