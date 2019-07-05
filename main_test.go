@@ -15,11 +15,11 @@ func TestViewHandlers(t *testing.T) {
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
 		"dbname=%s sslmode=disable",
 		dbHost, dbPort, dbUser, dbName)
-	us, err := models.NewUserService(psqlInfo)
+	s, err := models.NewServices(psqlInfo)
 	if err != nil {
 		panic(err)
 	}
-	defer us.Close()
+	defer s.Close()
 
 	type testset struct {
 		method   string
@@ -29,7 +29,7 @@ func TestViewHandlers(t *testing.T) {
 	}
 
 	staticC := controllers.NewStatic()
-	usersC := controllers.NewUsers(us)
+	usersC := controllers.NewUsers(s.User)
 	galleriesC := controllers.NewGalleries()
 
 	var tests = []testset{
