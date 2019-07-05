@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/gorilla/mux"
+
 	"github.com/peterpla/webdevgo/controllers"
 	"github.com/peterpla/webdevgo/models"
 	"github.com/peterpla/webdevgo/views"
-
-	"github.com/gorilla/mux"
 )
 
 const (
@@ -40,10 +40,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	// TODO: simplify this
-	defer services.User.Close()
-	// services.User.DestructiveReset()
-	services.User.AutoMigrate()
+	defer services.Close()
+	services.AutoMigrate()
 
 	// initialize controllers
 	staticC := controllers.NewStatic()

@@ -30,7 +30,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	defer services.User.Close()
+	defer services.Close()
 
 	os.Exit(m.Run())
 }

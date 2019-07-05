@@ -58,13 +58,6 @@ type UserDB interface {
 	Create(user *User) error
 	Update(user *User) error
 	Delete(id uint) error
-
-	// Close a database connection
-	Close() error
-
-	// Migration helpers
-	AutoMigrate() error
-	DestructiveReset() error
 }
 
 // The Public method on the modelError type effectively "white lists" these errors
@@ -278,30 +271,6 @@ func (ug *userGorm) Delete(id uint) error {
 	user := User{Model: gorm.Model{ID: id}}
 	// fmt.Printf("calling ug.db.Delete passing user=%+v\n", user)
 	return ug.db.Delete(&user).Error
-}
-
-// Close the userGorm database connection
-func (ug *userGorm) Close() error {
-	// log.Printf("enter UserService.Close")
-	return ug.db.Close()
-}
-
-// DestructiveReset drops the user table and rebuilds it
-func (ug *userGorm) DestructiveReset() error {
-	err := ug.db.DropTableIfExists(&User{}).Error
-	if err != nil {
-		return err
-	}
-	return ug.AutoMigrate()
-}
-
-// AutoMigrate will attempt to automaticaly migrate
-// the Users table
-func (ug *userGorm) AutoMigrate() error {
-	if err := ug.db.AutoMigrate(&User{}).Error; err != nil {
-		return err
-	}
-	return nil
 }
 
 /* ********** ********** ********** */
